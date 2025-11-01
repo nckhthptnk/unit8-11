@@ -1,0 +1,2415 @@
+<!doctype html>
+<html lang="vi">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unit 8: Health and Life Expectancy</title>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .flashcard {
+            perspective: 1000px;
+            cursor: pointer;
+        }
+        
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        
+        .flashcard.flipped .flashcard-inner {
+            transform: rotateY(180deg);
+        }
+        
+        .flashcard-front, .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            border-radius: 1rem;
+        }
+        
+        .flashcard-back {
+            transform: rotateY(180deg);
+        }
+        
+        .highlight {
+            background-color: #fef08a;
+            padding: 0 0.25rem;
+            border-radius: 0.25rem;
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.5s;
+        }
+        
+        @keyframes correctAnswer {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        @keyframes wrongAnswer {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        .correct-animation {
+            animation: correctAnswer 0.5s ease;
+        }
+        
+        .wrong-animation {
+            animation: wrongAnswer 0.5s ease;
+        }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="min-h-full">
+  <div id="app" class="min-h-full"></div>
+  <script>
+        const defaultConfig = {
+            unit_title: "Unit 8: Health and Life expectancy",
+            home_button_text: "Quay về trang chủ",
+            background_color: "#f0f9ff",
+            surface_color: "#ffffff",
+            text_color: "#1e293b",
+            primary_action_color: "#3b82f6",
+            secondary_action_color: "#64748b",
+            font_family: "Segoe UI",
+            font_size: 16
+        };
+
+        let currentData = [];
+        let currentFlashcardIndex = 0;
+        let currentSection = 'vocab';
+        let isFlipped = false;
+        let currentGrammarTopic = null;
+        let userAnswers = {};
+
+        const vocabularyData = [
+            {
+                word: "war",
+                ipa: "/wɔː(r)/",
+                type: "noun",
+                meaning: "chiến tranh",
+                example: "The war caused great suffering for many families."
+            },
+            {
+                word: "homeless",
+                ipa: "/ˈhəʊmləs/",
+                type: "adjective",
+                meaning: "vô gia cư",
+                example: "Many homeless people need shelter and food."
+            },
+            {
+                word: "disease",
+                ipa: "/dɪˈziːz/",
+                type: "noun",
+                meaning: "bệnh tật",
+                example: "This disease affects millions of people worldwide."
+            },
+            {
+                word: "hunger",
+                ipa: "/ˈhʌŋɡə(r)/",
+                type: "noun",
+                meaning: "đói khát",
+                example: "Hunger is still a major problem in many countries."
+            },
+            {
+                word: "unemployment",
+                ipa: "/ˌʌnɪmˈplɔɪmənt/",
+                type: "noun",
+                meaning: "thất nghiệp",
+                example: "High unemployment rates affect the economy badly."
+            },
+            {
+                word: "racism",
+                ipa: "/ˈreɪsɪzəm/",
+                type: "noun",
+                meaning: "phân biệt chủng tộc",
+                example: "We must fight against racism in all its forms."
+            },
+            {
+                word: "solve",
+                ipa: "/sɒlv/",
+                type: "verb",
+                meaning: "giải quyết",
+                example: "We need to solve this problem together."
+            },
+            {
+                word: "affordable",
+                ipa: "/əˈfɔːdəbl/",
+                type: "adjective",
+                meaning: "có thể chi trả được",
+                example: "We need more affordable housing for everyone."
+            },
+            {
+                word: "respect",
+                ipa: "/rɪˈspekt/",
+                type: "noun/verb",
+                meaning: "tôn trọng",
+                example: "Everyone deserves respect regardless of their background."
+            },
+            {
+                word: "collect",
+                ipa: "/kəˈlekt/",
+                type: "verb",
+                meaning: "thu thập",
+                example: "We collect donations for charity every month."
+            },
+            {
+                word: "nationality",
+                ipa: "/ˌnæʃəˈnæləti/",
+                type: "noun",
+                meaning: "quốc tịch",
+                example: "People of all nationalities live in this city."
+            },
+            {
+                word: "non-profit",
+                ipa: "/nɒn ˈprɒfɪt/",
+                type: "adjective",
+                meaning: "phi lợi nhuận",
+                example: "She works for a non-profit organization."
+            },
+            {
+                word: "organization",
+                ipa: "/ˌɔːɡənaɪˈzeɪʃn/",
+                type: "noun",
+                meaning: "tổ chức",
+                example: "This organization helps poor children get education."
+            },
+            {
+                word: "focus on",
+                ipa: "/ˈfəʊkəs ɒn/",
+                type: "phrasal verb",
+                meaning: "tập trung vào",
+                example: "We should focus on solving the most urgent problems first."
+            },
+            {
+                word: "deal with",
+                ipa: "/diːl wɪð/",
+                type: "phrasal verb",
+                meaning: "giải quyết, đối phó với",
+                example: "How do we deal with climate change effectively?"
+            },
+            {
+                word: "charity",
+                ipa: "/ˈtʃærəti/",
+                type: "noun",
+                meaning: "từ thiện",
+                example: "The charity provides food for homeless people."
+            },
+            {
+                word: "effort",
+                ipa: "/ˈefət/",
+                type: "noun",
+                meaning: "nỗ lực",
+                example: "It takes great effort to solve social problems."
+            },
+            {
+                word: "recognise",
+                ipa: "/ˈrekəɡnaɪz/",
+                type: "verb",
+                meaning: "nhận ra, công nhận",
+                example: "We must recognise the importance of education."
+            },
+            {
+                word: "symptom",
+                ipa: "/ˈsɪmptəm/",
+                type: "noun",
+                meaning: "triệu chứng",
+                example: "Fever is a common symptom of many diseases."
+            },
+            {
+                word: "tuberculosis",
+                ipa: "/tjuːˌbɜːkjuˈləʊsɪs/",
+                type: "noun",
+                meaning: "bệnh lao",
+                example: "Tuberculosis is a serious infectious disease."
+            },
+            {
+                word: "malaria",
+                ipa: "/məˈleəriə/",
+                type: "noun",
+                meaning: "bệnh sốt rét",
+                example: "Malaria is transmitted by mosquitoes."
+            },
+            {
+                word: "scale",
+                ipa: "/skeɪl/",
+                type: "noun",
+                meaning: "quy mô",
+                example: "The problem exists on a global scale."
+            },
+            {
+                word: "life-threatening",
+                ipa: "/laɪf ˈθretnɪŋ/",
+                type: "adjective",
+                meaning: "đe dọa tính mạng",
+                example: "This is a life-threatening condition that needs immediate treatment."
+            },
+            {
+                word: "invest",
+                ipa: "/ɪnˈvest/",
+                type: "verb",
+                meaning: "đầu tư",
+                example: "Governments should invest more in healthcare."
+            },
+            {
+                word: "crisis",
+                ipa: "/ˈkraɪsɪs/",
+                type: "noun",
+                meaning: "khủng hoảng",
+                example: "The economic crisis affected many families."
+            },
+            {
+                word: "conduct",
+                ipa: "/kənˈdʌkt/",
+                type: "verb",
+                meaning: "tiến hành",
+                example: "Scientists conduct research to find new treatments."
+            },
+            {
+                word: "conflict",
+                ipa: "/ˈkɒnflɪkt/",
+                type: "noun",
+                meaning: "xung đột",
+                example: "The conflict between the two countries lasted for years."
+            },
+            {
+                word: "accent",
+                ipa: "/ˈæksent/",
+                type: "noun",
+                meaning: "giọng điệu",
+                example: "She speaks English with a strong French accent."
+            },
+            {
+                word: "steal",
+                ipa: "/stiːl/",
+                type: "verb",
+                meaning: "ăn cắp",
+                example: "It's wrong to steal from others."
+            },
+            {
+                word: "candidate",
+                ipa: "/ˈkændɪdət/",
+                type: "noun",
+                meaning: "ứng viên",
+                example: "She is a strong candidate for the job."
+            },
+            {
+                word: "struggle",
+                ipa: "/ˈstrʌɡl/",
+                type: "verb/noun",
+                meaning: "đấu tranh, cuộc đấu tranh",
+                example: "Many people struggle to find affordable housing."
+            },
+            {
+                word: "movement",
+                ipa: "/ˈmuːvmənt/",
+                type: "noun",
+                meaning: "phong trào",
+                example: "The civil rights movement changed society."
+            },
+            {
+                word: "poverty",
+                ipa: "/ˈpɒvəti/",
+                type: "noun",
+                meaning: "nghèo đói",
+                example: "Poverty is one of the world's biggest challenges."
+            },
+            {
+                word: "depression",
+                ipa: "/dɪˈpreʃn/",
+                type: "noun",
+                meaning: "trầm cảm",
+                example: "Depression is a serious mental health condition."
+            },
+            {
+                word: "obesity",
+                ipa: "/əʊˈbiːsəti/",
+                type: "noun",
+                meaning: "béo phì",
+                example: "Obesity increases the risk of many diseases."
+            },
+            {
+                word: "bullying",
+                ipa: "/ˈbʊliɪŋ/",
+                type: "noun",
+                meaning: "bắt nạt",
+                example: "Bullying at school is a serious problem."
+            },
+            {
+                word: "crime",
+                ipa: "/kraɪm/",
+                type: "noun",
+                meaning: "tội phạm",
+                example: "The police work hard to prevent crime."
+            },
+            {
+                word: "healthcare",
+                ipa: "/ˈhelθkeə(r)/",
+                type: "noun",
+                meaning: "chăm sóc sức khỏe",
+                example: "Good healthcare should be available to everyone."
+            },
+            {
+                word: "pollution",
+                ipa: "/pəˈluːʃn/",
+                type: "noun",
+                meaning: "ô nhiễm",
+                example: "Air pollution is harmful to our health."
+            },
+            {
+                word: "gender inequality",
+                ipa: "/ˈdʒendə(r) ˌɪnɪˈkwɒləti/",
+                type: "noun",
+                meaning: "bất bình đẳng giới",
+                example: "Gender inequality still exists in many workplaces."
+            },
+            {
+                word: "rely on",
+                ipa: "/rɪˈlaɪ ɒn/",
+                type: "phrasal verb",
+                meaning: "dựa vào, phụ thuộc vào",
+                example: "Many families rely on government support."
+            },
+            {
+                word: "shelter",
+                ipa: "/ˈʃeltə(r)/",
+                type: "noun",
+                meaning: "nơi trú ẩn",
+                example: "The shelter provides housing for homeless people."
+            },
+            {
+                word: "deliver",
+                ipa: "/dɪˈlɪvə(r)/",
+                type: "verb",
+                meaning: "giao hàng, cung cấp",
+                example: "The organization delivers food to poor families."
+            },
+            {
+                word: "postpone",
+                ipa: "/pəˈspəʊn/",
+                type: "verb",
+                meaning: "hoãn lại",
+                example: "We had to postpone the meeting due to bad weather."
+            },
+            {
+                word: "volunteer",
+                ipa: "/ˌvɒlənˈtɪə(r)/",
+                type: "noun/verb",
+                meaning: "tình nguyện viên, làm tình nguyện",
+                example: "Many volunteers help at the local hospital."
+            },
+            {
+                word: "donate",
+                ipa: "/dəʊˈneɪt/",
+                type: "verb",
+                meaning: "quyên góp",
+                example: "People donate money to help disaster victims."
+            },
+            {
+                word: "fundraising",
+                ipa: "/ˈfʌndreɪzɪŋ/",
+                type: "noun",
+                meaning: "gây quỹ",
+                example: "The school organized a fundraising event for charity."
+            },
+            {
+                word: "recommend",
+                ipa: "/ˌrekəˈmend/",
+                type: "verb",
+                meaning: "khuyên, đề xuất",
+                example: "Doctors recommend regular exercise for good health."
+            },
+            {
+                word: "difficulty",
+                ipa: "/ˈdɪfɪkəlti/",
+                type: "noun",
+                meaning: "khó khăn",
+                example: "Many students face financial difficulties."
+            },
+            {
+                word: "blanket",
+                ipa: "/ˈblæŋkɪt/",
+                type: "noun",
+                meaning: "chăn",
+                example: "We distributed blankets to homeless people in winter."
+            },
+            {
+                word: "improve",
+                ipa: "/ɪmˈpruːv/",
+                type: "verb",
+                meaning: "cải thiện",
+                example: "Education can improve people's lives significantly."
+            },
+            {
+                word: "economy",
+                ipa: "/ɪˈkɒnəmi/",
+                type: "noun",
+                meaning: "nền kinh tế",
+                example: "A strong economy benefits everyone in society."
+            },
+            {
+                word: "campaign",
+                ipa: "/kæmˈpeɪn/",
+                type: "noun",
+                meaning: "chiến dịch",
+                example: "The health campaign raised awareness about smoking."
+            },
+            {
+                word: "protest",
+                ipa: "/ˈprəʊtest/",
+                type: "noun/verb",
+                meaning: "biểu tình, phản đối",
+                example: "People have the right to peaceful protest."
+            },
+            {
+                word: "fill up",
+                ipa: "/fɪl ʌp/",
+                type: "phrasal verb",
+                meaning: "làm đầy",
+                example: "Please fill up this form with your personal information."
+            },
+            {
+                word: "cash",
+                ipa: "/kæʃ/",
+                type: "noun",
+                meaning: "tiền mặt",
+                example: "The charity needs cash donations to buy supplies."
+            },
+            {
+                word: "ensure",
+                ipa: "/ɪnˈʃʊə(r)/",
+                type: "verb",
+                meaning: "đảm bảo",
+                example: "We must ensure that everyone has access to clean water."
+            },
+            {
+                word: "burglary",
+                ipa: "/ˈbɜːɡləri/",
+                type: "noun",
+                meaning: "trộm cắp",
+                example: "The police are investigating the burglary at the shop."
+            },
+            {
+                word: "stamp",
+                ipa: "/stæmp/",
+                type: "noun",
+                meaning: "tem",
+                example: "You need to put a stamp on the envelope before mailing it."
+            },
+            {
+                word: "citizen",
+                ipa: "/ˈsɪtɪzn/",
+                type: "noun",
+                meaning: "công dân",
+                example: "Every citizen has rights and responsibilities."
+            },
+            {
+                word: "chance",
+                ipa: "/tʃɑːns/",
+                type: "noun",
+                meaning: "cơ hội",
+                example: "Education gives children a chance for a better future."
+            },
+            {
+                word: "assistant",
+                ipa: "/əˈsɪstənt/",
+                type: "noun",
+                meaning: "trợ lý",
+                example: "The teaching assistant helps students with their homework."
+            },
+            {
+                word: "training",
+                ipa: "/ˈtreɪnɪŋ/",
+                type: "noun",
+                meaning: "đào tạo",
+                example: "Job training programs help unemployed people find work."
+            },
+            {
+                word: "consequently",
+                ipa: "/ˈkɒnsɪkwəntli/",
+                type: "adverb",
+                meaning: "do đó, kết quả là",
+                example: "It rained heavily; consequently, the match was cancelled."
+            },
+            {
+                word: "physical",
+                ipa: "/ˈfɪzɪkl/",
+                type: "adjective",
+                meaning: "thuộc về thể chất",
+                example: "Regular exercise improves your physical health."
+            },
+            {
+                word: "harmful",
+                ipa: "/ˈhɑːmfl/",
+                type: "adjective",
+                meaning: "có hại",
+                example: "Smoking is harmful to your health."
+            },
+            {
+                word: "keen on",
+                ipa: "/kiːn ɒn/",
+                type: "adjective phrase",
+                meaning: "thích thú, quan tâm",
+                example: "She is keen on helping disadvantaged children."
+            }
+        ];
+
+        const readingText = `
+            <p>Global health challenges require urgent attention from governments and <span class="highlight">organizations</span> worldwide. <span class="highlight">Poverty</span> remains one of the biggest obstacles to achieving good <span class="highlight">healthcare</span> for all. Many people cannot afford basic medical services, and this creates a serious <span class="highlight">crisis</span> in developing countries.</p>
+            
+            <p><span class="highlight">Disease</span> outbreaks like <span class="highlight">tuberculosis</span> and <span class="highlight">malaria</span> continue to threaten millions of lives, especially in areas affected by <span class="highlight">war</span> and <span class="highlight">conflict</span>. These <span class="highlight">life-threatening</span> conditions require immediate medical <span class="highlight">treatment</span>, but many <span class="highlight">homeless</span> and displaced people lack access to proper care. <span class="highlight">Volunteers</span> from <span class="highlight">non-profit</span> organizations work tirelessly to <span class="highlight">deliver</span> medicine and <span class="highlight">collect</span> donations to help those in need.</p>
+            
+            <p>To <span class="highlight">solve</span> these problems, governments must <span class="highlight">invest</span> more in <span class="highlight">affordable</span> healthcare systems. We must <span class="highlight">focus on</span> prevention and education to <span class="highlight">improve</span> public health. Every <span class="highlight">citizen</span> deserves the <span class="highlight">chance</span> to live a healthy life, regardless of their <span class="highlight">nationality</span> or economic status. Only through collective <span class="highlight">effort</span> can we <span class="highlight">ensure</span> that quality healthcare becomes accessible to everyone.</p>
+        `;
+
+        const readingQuestions = [
+            {
+                question: "What is one of the biggest obstacles to achieving good healthcare for all?",
+                options: [
+                    "Lack of doctors",
+                    "Poverty",
+                    "Bad weather",
+                    "Language barriers"
+                ],
+                correct: 1
+            },
+            {
+                question: "Which diseases are mentioned as continuing to threaten millions of lives?",
+                options: [
+                    "Cancer and diabetes",
+                    "Tuberculosis and malaria",
+                    "Heart disease and stroke",
+                    "Flu and cold"
+                ],
+                correct: 1
+            },
+            {
+                question: "Who works to deliver medicine and collect donations?",
+                options: [
+                    "Government officials",
+                    "Volunteers from non-profit organizations",
+                    "Private companies",
+                    "International banks"
+                ],
+                correct: 1
+            },
+            {
+                question: "What must governments do to solve healthcare problems?",
+                options: [
+                    "Build more hospitals only",
+                    "Invest more in affordable healthcare systems",
+                    "Hire more doctors only",
+                    "Reduce healthcare costs only"
+                ],
+                correct: 1
+            },
+            {
+                question: "According to the text, what does every citizen deserve?",
+                options: [
+                    "Free education",
+                    "The chance to live a healthy life",
+                    "A good job",
+                    "Expensive medicine"
+                ],
+                correct: 1
+            }
+        ];
+
+        const grammarTopics = {
+            must_vs_have_to: {
+                title: "Modals: must vs have to",
+                content: `
+                    <h3 class="font-bold mb-4" style="font-size: 1.25em;">Must vs Have to</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold mb-2" style="font-size: 1.1em;">MUST</h4>
+                            <ul class="list-disc pl-6 space-y-2">
+                                <li>Diễn tả sự bắt buộc từ người nói (personal obligation)</li>
+                                <li>Ví dụ: You must see a doctor. (Tôi nghĩ bạn phải đi khám bác sĩ)</li>
+                                <li>Diễn tả luật lệ, quy định: Students must wear uniforms.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold mb-2" style="font-size: 1.1em;">HAVE TO</h4>
+                            <ul class="list-disc pl-6 space-y-2">
+                                <li>Diễn tả sự bắt buộc từ bên ngoài (external obligation)</li>
+                                <li>Ví dụ: I have to take this medicine. (Bác sĩ bảo tôi phải uống thuốc này)</li>
+                                <li>Có thể chia theo thì: had to (quá khứ), will have to (tương lai)</li>
+                            </ul>
+                        </div>
+                    </div>
+                `
+            },
+            mustnt_vs_dont_have_to: {
+                title: "Phân biệt mustn't vs don't/doesn't have to",
+                content: `
+                    <h3 class="font-bold mb-4" style="font-size: 1.25em;">Mustn't vs Don't/Doesn't Have To</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold mb-2" style="font-size: 1.1em;">MUSTN'T</h4>
+                            <ul class="list-disc pl-6 space-y-2">
+                                <li>Diễn tả sự cấm đoán (prohibition)</li>
+                                <li>Ví dụ: You mustn't smoke here. (Bạn không được hút thuốc ở đây)</li>
+                                <li>= It's forbidden / You are not allowed to</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold mb-2" style="font-size: 1.1em;">DON'T/DOESN'T HAVE TO</h4>
+                            <ul class="list-disc pl-6 space-y-2">
+                                <li>Diễn tả sự không cần thiết (not necessary)</li>
+                                <li>Ví dụ: You don't have to come early. (Bạn không cần đến sớm)</li>
+                                <li>= It's not necessary / You don't need to</li>
+                            </ul>
+                        </div>
+                    </div>
+                `
+            }
+        };
+
+        const vocabularyQuiz = [
+            { question: "What does 'war' mean?", options: ["hòa bình", "chiến tranh", "thỏa thuận", "đàm phán"], correct: 1 },
+            { question: "Choose the correct meaning of 'homeless':", options: ["có nhà", "vô gia cư", "giàu có", "nghèo khó"], correct: 1 },
+            { question: "What is the meaning of 'disease'?", options: ["sức khỏe", "thuốc men", "bệnh tật", "bác sĩ"], correct: 2 },
+            { question: "'Hunger' means:", options: ["no", "đói khát", "khát nước", "ăn uống"], correct: 1 },
+            { question: "What does 'unemployment' refer to?", options: ["có việc làm", "thất nghiệp", "nghỉ hưu", "làm việc"], correct: 1 },
+            { question: "'Racism' is:", options: ["bình đẳng", "phân biệt chủng tộc", "hòa hợp", "đoàn kết"], correct: 1 },
+            { question: "To 'solve' means:", options: ["tạo ra", "giải quyết", "phá hủy", "bỏ qua"], correct: 1 },
+            { question: "'Affordable' means:", options: ["đắt đỏ", "miễn phí", "có thể chi trả được", "không thể mua"], correct: 2 },
+            { question: "What does 'respect' mean?", options: ["tôn trọng", "coi thường", "ghét bỏ", "phớt lờ"], correct: 0 },
+            { question: "To 'collect' means:", options: ["ném bỏ", "thu thập", "phân tán", "mất mát"], correct: 1 },
+            { question: "'Nationality' refers to:", options: ["tôn giáo", "quốc tịch", "nghề nghiệp", "tuổi tác"], correct: 1 },
+            { question: "A 'non-profit' organization:", options: ["kiếm lời", "phi lợi nhuận", "tư nhân", "chính phủ"], correct: 1 },
+            { question: "'Organization' means:", options: ["cá nhân", "tổ chức", "gia đình", "bạn bè"], correct: 1 },
+            { question: "To 'focus on' means:", options: ["bỏ qua", "tập trung vào", "phân tán", "lãng quên"], correct: 1 },
+            { question: "'Deal with' means:", options: ["tránh né", "giải quyết", "tạo ra", "phá hủy"], correct: 1 },
+            { question: "'Charity' refers to:", options: ["kinh doanh", "từ thiện", "chính trị", "giải trí"], correct: 1 },
+            { question: "An 'effort' is:", options: ["sự lười biếng", "nỗ lực", "thất bại", "may mắn"], correct: 1 },
+            { question: "To 'recognise' means:", options: ["phủ nhận", "nhận ra", "quên lãng", "che giấu"], correct: 1 },
+            { question: "A 'symptom' is:", options: ["nguyên nhân", "triệu chứng", "kết quả", "phương pháp"], correct: 1 },
+            { question: "'Tuberculosis' is:", options: ["bệnh tim", "bệnh lao", "bệnh gan", "bệnh thận"], correct: 1 },
+            { question: "'Malaria' is transmitted by:", options: ["chó", "mèo", "muỗi", "chuột"], correct: 2 },
+            { question: "'Scale' refers to:", options: ["màu sắc", "quy mô", "hình dạng", "trọng lượng"], correct: 1 },
+            { question: "'Life-threatening' means:", options: ["an toàn", "đe dọa tính mạng", "vui vẻ", "bình thường"], correct: 1 },
+            { question: "To 'invest' means:", options: ["tiêu xài", "đầu tư", "vay mượn", "cho tặng"], correct: 1 },
+            { question: "A 'crisis' is:", options: ["thành công", "khủng hoảng", "cơ hội", "niềm vui"], correct: 1 },
+            { question: "To 'conduct' means:", options: ["ngừng lại", "tiến hành", "phá hủy", "tránh né"], correct: 1 },
+            { question: "A 'conflict' is:", options: ["hòa bình", "xung đột", "thỏa thuận", "hợp tác"], correct: 1 },
+            { question: "An 'accent' is:", options: ["giọng điệu", "từ vựng", "ngữ pháp", "chữ viết"], correct: 0 },
+            { question: "To 'steal' means:", options: ["cho tặng", "ăn cắp", "mua bán", "trao đổi"], correct: 1 },
+            { question: "A 'candidate' is:", options: ["người thắng cuộc", "ứng viên", "người thua cuộc", "khán giả"], correct: 1 },
+            { question: "To 'struggle' means:", options: ["thành công", "đấu tranh", "nghỉ ngơi", "vui chơi"], correct: 1 },
+            { question: "A 'movement' is:", options: ["sự đứng yên", "phong trào", "cá nhân", "tòa nhà"], correct: 1 },
+            { question: "'Poverty' means:", options: ["giàu có", "nghèo đói", "bình thường", "xa hoa"], correct: 1 },
+            { question: "'Depression' is:", options: ["hạnh phúc", "trầm cảm", "phấn khích", "bình thường"], correct: 1 },
+            { question: "'Obesity' refers to:", options: ["gầy yếu", "béo phì", "cân đối", "cao lớn"], correct: 1 },
+            { question: "'Bullying' is:", options: ["giúp đỡ", "bắt nạt", "khen ngợi", "động viên"], correct: 1 },
+            { question: "'Crime' refers to:", options: ["việc tốt", "tội phạm", "công việc", "sở thích"], correct: 1 },
+            { question: "'Healthcare' means:", options: ["giáo dục", "chăm sóc sức khỏe", "giải trí", "thể thao"], correct: 1 },
+            { question: "'Pollution' is:", options: ["sạch sẽ", "ô nhiễm", "trong lành", "tươi mới"], correct: 1 },
+            { question: "'Gender inequality' refers to:", options: ["bình đẳng giới", "bất bình đẳng giới", "nam giới", "nữ giới"], correct: 1 },
+            { question: "To 'rely on' means:", options: ["từ chối", "dựa vào", "tránh xa", "phản đối"], correct: 1 },
+            { question: "A 'shelter' is:", options: ["nơi nguy hiểm", "nơi trú ẩn", "nơi làm việc", "nơi vui chơi"], correct: 1 },
+            { question: "To 'deliver' means:", options: ["nhận", "giao hàng", "mua", "bán"], correct: 1 },
+            { question: "To 'postpone' means:", options: ["tiến hành ngay", "hoãn lại", "hủy bỏ", "thúc đẩy"], correct: 1 },
+            { question: "A 'volunteer' is:", options: ["người được trả lương", "tình nguyện viên", "sếp", "khách hàng"], correct: 1 },
+            { question: "To 'donate' means:", options: ["nhận", "quyên góp", "mua", "bán"], correct: 1 },
+            { question: "'Fundraising' is:", options: ["tiêu tiền", "gây quỹ", "vay tiền", "cho vay"], correct: 1 },
+            { question: "To 'recommend' means:", options: ["phản đối", "khuyên", "cấm", "bỏ qua"], correct: 1 },
+            { question: "A 'difficulty' is:", options: ["dễ dàng", "khó khăn", "thuận lợi", "may mắn"], correct: 1 },
+            { question: "A 'blanket' is:", options: ["gối", "chăn", "nệm", "màn"], correct: 1 },
+            { question: "To 'improve' means:", options: ["làm xấu đi", "cải thiện", "giữ nguyên", "phá hủy"], correct: 1 },
+            { question: "The 'economy' refers to:", options: ["chính trị", "nền kinh tế", "văn hóa", "xã hội"], correct: 1 },
+            { question: "A 'campaign' is:", options: ["cuộc thi", "chiến dịch", "lễ hội", "buổi tiệc"], correct: 1 },
+            { question: "To 'protest' means:", options: ["ủng hộ", "biểu tình", "đồng ý", "khen ngợi"], correct: 1 },
+            { question: "'Fill up' means:", options: ["làm rỗng", "làm đầy", "làm sạch", "làm bẩn"], correct: 1 },
+            { question: "'Cash' refers to:", options: ["thẻ tín dụng", "tiền mặt", "séc", "chuyển khoản"], correct: 1 },
+            { question: "To 'ensure' means:", options: ["nghi ngờ", "đảm bảo", "từ chối", "phủ nhận"], correct: 1 },
+            { question: "'Burglary' is:", options: ["mua bán", "trộm cắp", "cho tặng", "trao đổi"], correct: 1 },
+            { question: "A 'stamp' is used for:", options: ["ăn", "tem", "viết", "vẽ"], correct: 1 },
+            { question: "A 'citizen' is:", options: ["khách du lịch", "công dân", "người nước ngoài", "doanh nhân"], correct: 1 },
+            { question: "A 'chance' is:", options: ["thất bại", "cơ hội", "khó khăn", "trở ngại"], correct: 1 },
+            { question: "An 'assistant' is:", options: ["sếp", "trợ lý", "khách hàng", "đối thủ"], correct: 1 },
+            { question: "'Training' refers to:", options: ["nghỉ ngơi", "đào tạo", "vui chơi", "du lịch"], correct: 1 },
+            { question: "'Consequently' means:", options: ["trước đó", "do đó", "mặc dù", "tuy nhiên"], correct: 1 },
+            { question: "'Physical' relates to:", options: ["tinh thần", "thể chất", "cảm xúc", "trí tuệ"], correct: 1 },
+            { question: "'Harmful' means:", options: ["có lợi", "có hại", "trung tính", "tốt"], correct: 1 },
+            { question: "'Keen on' means:", options: ["ghét", "thích thú", "sợ hãi", "bỏ qua"], correct: 1 },
+            { question: "Which word means 'chiến tranh'?", options: ["peace", "war", "agreement", "treaty"], correct: 1 },
+            { question: "Which word means 'tôn trọng'?", options: ["disrespect", "ignore", "respect", "hate"], correct: 2 },
+            { question: "Which word means 'cải thiện'?", options: ["worsen", "maintain", "destroy", "improve"], correct: 3 }
+        ];
+
+        const lifeExpectancyText = `
+            <h3 style="color: #2563eb; font-weight: bold; margin-bottom: 1rem;">🥗 HOW TO EAT FOR LONGEVITY</h3>
+            <p><strong>✅ What to do:</strong> Eat <span class="highlight">5 servings of fruits and vegetables</span> daily - this is the secret of Japanese people who live the longest in the world. <span class="highlight">Drink green tea</span> instead of coffee, eat <span class="highlight">salmon and mackerel</span> rich in omega-3. Choose <span class="highlight">brown rice and oats</span> instead of white rice.</p>
+            <p><strong>❌ Avoid:</strong> Fast food, processed foods, too much sugar and salt. Limit red meat to only 2 times per week.</p>
+            
+            <h3 style="color: #16a34a; font-weight: bold; margin-bottom: 1rem; margin-top: 2rem;">🏃 HOW TO EXERCISE EFFECTIVELY</h3>
+            <p><strong>The 3-2-1 Rule:</strong> <span class="highlight">30 minutes of brisk walking</span> daily, <span class="highlight">20 minutes of strength training</span> twice a week, <span class="highlight">10 minutes of stretching</span> before bed. Elderly people should practice <span class="highlight">tai chi</span> to improve physical and mental health.</p>
+            <p><strong>Helpful tips:</strong> Take stairs instead of elevators, park farther to walk more, doing housework is also exercise!</p>
+            
+            <h3 style="color: #dc2626; font-weight: bold; margin-bottom: 1rem; margin-top: 2rem;">😴 HOW TO SLEEP AND REST</h3>
+            <p><strong>Sleep properly:</strong> <span class="highlight">Go to bed before 11 PM</span>, turn off your phone 1 hour before sleep. Keep bedroom <span class="highlight">dark, cool, and quiet</span>. Take 15-20 minute naps if possible.</p>
+            <p><strong>Reduce stress:</strong> Practice <span class="highlight">4-7-8 breathing</span> (inhale 4 seconds, hold 7 seconds, exhale 8 seconds). Listen to relaxing music, read books instead of watching TV.</p>
+            
+            <h3 style="color: #7c3aed; font-weight: bold; margin-bottom: 1rem; margin-top: 2rem;">👥 HOW TO BUILD RELATIONSHIPS</h3>
+            <p><strong>Social connections:</strong> <span class="highlight">Call friends</span> at least once a week, join <span class="highlight">clubs and community activities</span>. People with many friends live 50% longer than lonely people!</p>
+            <p><strong>Love and care:</strong> Keep pets, care for plants, help others - these activities help the brain release happiness hormones.</p>
+            
+            <h3 style="color: #ea580c; font-weight: bold; margin-bottom: 1rem; margin-top: 2rem;">🧠 HOW TO KEEP YOUR BRAIN HEALTHY</h3>
+            <p><strong>Lifelong learning:</strong> <span class="highlight">Learn foreign languages, play chess</span>, solve crosswords, read books daily. Try <span class="highlight">new hobbies</span> like painting, cooking, gardening.</p>
+            <p><strong>Meditation:</strong> Just <span class="highlight">10 minutes of meditation</span> each morning helps reduce 23% risk of stroke and heart attack!</p>
+        `;
+
+        // Life Expectancy questions removed - content only section
+
+        const grammarExercises = [
+            { question: "You ___ wear a helmet when riding a motorcycle.", options: ["must", "have to", "both A and B"], correct: 2 },
+            { question: "I ___ finish this report by tomorrow. My boss said so.", options: ["must", "have to", "both A and B"], correct: 1 },
+            { question: "You ___ eat in the library. It's against the rules.", options: ["mustn't", "don't have to", "both A and B"], correct: 0 },
+            { question: "You ___ bring your own lunch. We'll provide food.", options: ["mustn't", "don't have to", "both A and B"], correct: 1 },
+            { question: "Students ___ submit their assignments on time.", options: ["must", "have to", "both A and B"], correct: 2 },
+            { question: "We ___ go to school yesterday because it was Sunday.", options: ["mustn't", "didn't have to", "both A and B"], correct: 1 },
+            { question: "You ___ touch that wire. It's dangerous!", options: ["mustn't", "don't have to", "both A and B"], correct: 0 },
+            { question: "She ___ work late tonight. Her manager asked her to.", options: ["must", "has to", "both A and B"], correct: 1 },
+            { question: "You ___ shout in the hospital.", options: ["mustn't", "don't have to", "both A and B"], correct: 0 },
+            { question: "I ___ get up early tomorrow. It's my day off.", options: ["mustn't", "don't have to", "both A and B"], correct: 1 },
+            { question: "You ___ exercise regularly to stay healthy.", options: ["must", "have to", "both A and B"], correct: 0 },
+            { question: "They ___ wear uniforms at their new school.", options: ["must", "have to", "both A and B"], correct: 1 },
+            { question: "You ___ park here. It's a no-parking zone.", options: ["mustn't", "don't have to", "both A and B"], correct: 0 },
+            { question: "We ___ hurry. We have plenty of time.", options: ["mustn't", "don't have to", "both A and B"], correct: 1 },
+            { question: "You ___ be 18 to vote in elections.", options: ["must", "have to", "both A and B"], correct: 2 },
+            { question: "I ___ take this medicine three times a day.", options: ["must", "have to", "both A and B"], correct: 1 },
+            { question: "You ___ use your phone during the exam.", options: ["mustn't", "don't have to", "both A and B"], correct: 0 },
+            { question: "You ___ come if you're busy. It's optional.", options: ["mustn't", "don't have to", "both A and B"], correct: 1 },
+            { question: "Drivers ___ stop at red lights.", options: ["must", "have to", "both A and B"], correct: 2 },
+            { question: "She ___ work tomorrow. It's a public holiday.", options: ["mustn't", "doesn't have to", "both A and B"], correct: 1 },
+            { question: "You ___ be quiet in the library.", options: ["must", "have to", "both A and B"], correct: 2 },
+            { question: "We ___ pay for the tickets. They're free.", options: ["mustn't", "don't have to", "both A and B"], correct: 1 },
+            { question: "You ___ smoke near the gas station.", options: ["mustn't", "don't have to", "both A and B"], correct: 0 },
+            { question: "I ___ attend the meeting. My boss insists.", options: ["must", "have to", "both A and B"], correct: 1 },
+            { question: "You ___ bring anything. We have everything.", options: ["mustn't", "don't have to", "both A and B"], correct: 1 },
+            { question: "Children ___ play with matches.", options: ["mustn't", "don't have to", "both A and B"], correct: 0 },
+            { question: "You ___ have a passport to travel abroad.", options: ["must", "have to", "both A and B"], correct: 2 },
+            { question: "We ___ book in advance. There are plenty of seats.", options: ["mustn't", "don't have to", "both A and B"], correct: 1 },
+            { question: "You ___ tell anyone about this. It's confidential.", options: ["mustn't", "don't have to", "both A and B"], correct: 0 },
+            { question: "I ___ wake up early tomorrow for my flight.", options: ["must", "have to", "both A and B"], correct: 1 }
+        ];
+
+        const dataHandler = {
+            onDataChanged(data) {
+                console.log('📊 Data changed received:', data);
+                currentData = data;
+                updateProgressDisplay();
+                
+                // Force update total progress after data sync
+                setTimeout(() => {
+                    console.log('🔄 Force updating total progress after data sync');
+                    updateTotalProgress();
+                }, 200);
+            }
+        };
+
+        async function initializeApp() {
+            try {
+                const initResult = await window.dataSdk.init(dataHandler);
+                if (!initResult.isOk) {
+                    console.error("Failed to initialize data SDK");
+                }
+                
+                if (window.elementSdk) {
+                    window.elementSdk.init({
+                        defaultConfig,
+                        onConfigChange: async (config) => {
+                            await renderApp(config);
+                        },
+                        mapToCapabilities: (config) => ({
+                            recolorables: [
+                                {
+                                    get: () => config.background_color || defaultConfig.background_color,
+                                    set: (value) => {
+                                        config.background_color = value;
+                                        window.elementSdk.setConfig({ background_color: value });
+                                    }
+                                },
+                                {
+                                    get: () => config.surface_color || defaultConfig.surface_color,
+                                    set: (value) => {
+                                        config.surface_color = value;
+                                        window.elementSdk.setConfig({ surface_color: value });
+                                    }
+                                },
+                                {
+                                    get: () => config.text_color || defaultConfig.text_color,
+                                    set: (value) => {
+                                        config.text_color = value;
+                                        window.elementSdk.setConfig({ text_color: value });
+                                    }
+                                },
+                                {
+                                    get: () => config.primary_action_color || defaultConfig.primary_action_color,
+                                    set: (value) => {
+                                        config.primary_action_color = value;
+                                        window.elementSdk.setConfig({ primary_action_color: value });
+                                    }
+                                },
+                                {
+                                    get: () => config.secondary_action_color || defaultConfig.secondary_action_color,
+                                    set: (value) => {
+                                        config.secondary_action_color = value;
+                                        window.elementSdk.setConfig({ secondary_action_color: value });
+                                    }
+                                }
+                            ],
+                            borderables: [],
+                            fontEditable: {
+                                get: () => config.font_family || defaultConfig.font_family,
+                                set: (value) => {
+                                    config.font_family = value;
+                                    window.elementSdk.setConfig({ font_family: value });
+                                }
+                            },
+                            fontSizeable: {
+                                get: () => config.font_size || defaultConfig.font_size,
+                                set: (value) => {
+                                    config.font_size = value;
+                                    window.elementSdk.setConfig({ font_size: value });
+                                }
+                            }
+                        }),
+                        mapToEditPanelValues: (config) => new Map([
+                            ["unit_title", config.unit_title || defaultConfig.unit_title],
+                            ["home_button_text", config.home_button_text || defaultConfig.home_button_text]
+                        ])
+                    });
+                }
+                
+                await renderApp(window.elementSdk?.config || defaultConfig);
+            } catch (error) {
+                console.error("Error initializing app:", error);
+                // Fallback render without SDK
+                await renderApp(defaultConfig);
+            }
+        }
+
+        async function renderApp(config) {
+            const app = document.getElementById('app');
+            const customFont = config.font_family || defaultConfig.font_family;
+            const baseSize = config.font_size || defaultConfig.font_size;
+            const bgColor = config.background_color || defaultConfig.background_color;
+            const surfaceColor = config.surface_color || defaultConfig.surface_color;
+            const textColor = config.text_color || defaultConfig.text_color;
+            const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+            const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+            
+            document.body.style.backgroundColor = bgColor;
+            document.body.style.color = textColor;
+            document.body.style.fontFamily = `${customFont}, Arial, sans-serif`;
+            document.body.style.fontSize = `${baseSize}px`;
+            
+            const progress = calculateProgress();
+            
+            app.innerHTML = `
+                <div class="min-h-full p-4 md:p-8">
+                    <div class="max-w-6xl mx-auto">
+                        <!-- Header -->
+                        <div class="mb-8">
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+                                <!-- Home button always on the left -->
+                                <a href="https://nckhthptnk.github.io/tienganh11/" target="_blank" rel="noopener noreferrer" 
+                                   class="px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-colors flex-shrink-0 self-start sm:self-center" 
+                                   style="background-color: ${secondaryColor}; color: white; font-size: ${baseSize * 0.875}px; font-family: ${customFont}, Arial, sans-serif;">
+                                    ${config.home_button_text || defaultConfig.home_button_text}
+                                </a>
+                                
+                                <!-- Title centered -->
+                                <h1 class="font-bold text-center flex-1 sm:absolute sm:left-1/2 sm:transform sm:-translate-x-1/2" 
+                                   style="font-size: ${baseSize * 1.5}px; color: ${textColor}; font-family: ${customFont}, Arial, sans-serif;">
+                                    ${config.unit_title || defaultConfig.unit_title}
+                                </h1>
+                                
+                                <!-- Spacer to balance layout on larger screens -->
+                                <div class="hidden sm:block sm:w-24"></div>
+                            </div>
+                            
+                            <!-- Progress Section -->
+                            <div class="rounded-xl p-6 shadow-lg" style="background-color: ${surfaceColor};">
+                                <h2 class="font-bold mb-4" style="font-size: ${baseSize * 1.5}px; color: ${textColor}; font-family: ${customFont}, Arial, sans-serif;">Tiến độ học tập</h2>
+                                <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                                    ${createProgressCircle('Tổng', progress.total, baseSize, customFont, textColor, primaryColor)}
+                                    ${createProgressCircle('Từ vựng', progress.vocab, baseSize, customFont, textColor, primaryColor)}
+                                    ${createProgressCircle('Bài đọc', progress.reading, baseSize, customFont, textColor, primaryColor)}
+                                    ${createProgressCircle('Ngữ pháp', progress.grammar, baseSize, customFont, textColor, primaryColor)}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Section Tabs -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
+                            <button onclick="switchSection('vocab')" id="tab-vocab" class="px-3 py-3 sm:px-6 rounded-lg font-semibold transition-colors text-center" style="font-size: ${baseSize * 0.875}px; font-family: ${customFont}, Arial, sans-serif;">
+                                Từ vựng
+                            </button>
+                            <button onclick="switchSection('reading')" id="tab-reading" class="px-3 py-3 sm:px-6 rounded-lg font-semibold transition-colors text-center" style="font-size: ${baseSize * 0.875}px; font-family: ${customFont}, Arial, sans-serif;">
+                                Bài đọc
+                            </button>
+                            <button onclick="switchSection('grammar')" id="tab-grammar" class="px-3 py-3 sm:px-6 rounded-lg font-semibold transition-colors text-center" style="font-size: ${baseSize * 0.875}px; font-family: ${customFont}, Arial, sans-serif;">
+                                Ngữ pháp
+                            </button>
+                            <button onclick="switchSection('life-expectancy')" id="tab-life-expectancy" class="px-3 py-3 sm:px-6 rounded-lg font-semibold transition-colors text-center" style="font-size: ${baseSize * 0.875}px; font-family: ${customFont}, Arial, sans-serif;">
+                                Life Expectancy
+                            </button>
+                        </div>
+                        
+                        <!-- Content Area -->
+                        <div id="content-area" class="rounded-xl p-6 shadow-lg" style="background-color: ${surfaceColor};">
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            updateTabStyles(config);
+            renderContent(config);
+        }
+
+        function createProgressCircle(label, percentage, baseSize, font, textColor, primaryColor) {
+            const radius = 35;
+            const circumference = 2 * Math.PI * radius;
+            const offset = circumference - (percentage / 100) * circumference;
+            
+            return `
+                <div class="flex flex-col items-center">
+                    <svg width="90" height="90" class="progress-ring">
+                        <circle cx="45" cy="45" r="${radius}" stroke="#e5e7eb" stroke-width="6" fill="none"/>
+                        <circle cx="45" cy="45" r="${radius}" stroke="${primaryColor}" stroke-width="6" fill="none"
+                                class="progress-ring-circle"
+                                style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${offset};"/>
+                    </svg>
+                    <div class="text-center mt-1 sm:mt-2">
+                        <div class="font-bold" style="font-size: ${baseSize * 1.1}px; color: ${textColor}; font-family: ${font}, Arial, sans-serif;">${percentage}%</div>
+                        <div class="text-xs sm:text-sm" style="color: ${textColor}; font-family: ${font}, Arial, sans-serif;">${label}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        let currentVocabQuestion = -1;
+
+        function renderVocabQuiz(container, config) {
+            const baseSize = config.font_size || defaultConfig.font_size;
+            const customFont = config.font_family || defaultConfig.font_family;
+            const textColor = config.text_color || defaultConfig.text_color;
+            const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+            const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+            
+            if (currentVocabQuestion === -1) {
+                // Show quiz menu
+                container.innerHTML = `
+                    <div class="max-w-4xl mx-auto">
+                        <button onclick="backToVocabMenu()" 
+                                class="mb-6 px-4 py-2 rounded-lg transition-colors"
+                                style="background-color: ${secondaryColor}; color: white; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;">
+                            ← Quay lại
+                        </button>
+                        
+                        <h2 class="font-bold mb-6" style="font-size: ${baseSize * 1.5}px; color: ${textColor}; font-family: ${customFont}, Arial, sans-serif;">
+                            Kiểm tra từ vựng (67 câu)
+                        </h2>
+                        
+                        <div class="flex justify-center">
+                            <button onclick="startVocabQuiz()" 
+                                    class="px-8 py-4 rounded-lg font-bold text-lg transition-colors"
+                                    style="background-color: ${primaryColor}; color: white; font-size: ${baseSize * 1.1}px; font-family: ${customFont}, Arial, sans-serif;">
+                                Bắt đầu kiểm tra →
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Show current question
+                const q = vocabularyQuiz[currentVocabQuestion];
+                const isAnswered = userAnswers[`vocab-${currentVocabQuestion}`] !== undefined;
+                
+                container.innerHTML = `
+                    <div class="max-w-4xl mx-auto">
+                        <div class="mb-6 flex justify-between items-center">
+                            <button onclick="backToVocabQuizMenu()" 
+                                    class="px-4 py-2 rounded-lg transition-colors"
+                                    style="background-color: ${secondaryColor}; color: white; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;">
+                                ← Quay lại menu
+                            </button>
+                            <div style="font-size: ${baseSize}px; color: ${textColor}; font-family: ${customFont}, Arial, sans-serif;">
+                                Câu ${currentVocabQuestion + 1} / ${vocabularyQuiz.length}
+                            </div>
+                        </div>
+                        
+                        <div class="p-6 rounded-lg mb-6" style="background-color: rgba(0,0,0,0.05);">
+                            <div class="font-bold mb-4" style="font-size: ${baseSize * 1.25}px; color: ${textColor}; font-family: ${customFont}, Arial, sans-serif;">
+                                ${q.question}
+                            </div>
+                            
+                            <div class="space-y-3">
+                                ${q.options.map((opt, optIdx) => `
+                                    <button onclick="checkVocabAnswer(${currentVocabQuestion}, ${optIdx})" 
+                                            id="vocab-q${currentVocabQuestion}-opt${optIdx}"
+                                            class="w-full text-left p-4 rounded-lg transition-colors ${isAnswered ? 'cursor-not-allowed' : 'hover:bg-gray-100'}"
+                                            style="background-color: white; color: ${textColor}; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif; border: 2px solid #e5e7eb;"
+                                            ${isAnswered ? 'disabled' : ''}>
+                                        ${String.fromCharCode(65 + optIdx)}. ${opt}
+                                    </button>
+                                `).join('')}
+                            </div>
+                            
+                            <div id="vocab-feedback-${currentVocabQuestion}" class="mt-4" style="font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;"></div>
+                        </div>
+                        
+                        <div class="flex justify-between">
+                            <button onclick="previousVocabQuestion()" 
+                                    class="px-6 py-3 rounded-lg font-semibold transition-colors ${currentVocabQuestion === 0 ? 'opacity-50 cursor-not-allowed' : ''}"
+                                    style="background-color: ${secondaryColor}; color: white; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;"
+                                    ${currentVocabQuestion === 0 ? 'disabled' : ''}>
+                                ← Trước
+                            </button>
+                            
+                            <button onclick="nextVocabQuestion()" 
+                                    class="px-6 py-3 rounded-lg font-semibold transition-colors ${currentVocabQuestion === vocabularyQuiz.length - 1 ? 'opacity-50 cursor-not-allowed' : ''}"
+                                    style="background-color: ${primaryColor}; color: white; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;"
+                                    ${currentVocabQuestion === vocabularyQuiz.length - 1 ? 'disabled' : ''}>
+                                Tiếp →
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                // Restore previous answer if exists
+                if (isAnswered) {
+                    restoreVocabAnswer(currentVocabQuestion);
+                }
+            }
+        }
+
+        function switchSection(section) {
+            currentSection = section;
+            currentFlashcardIndex = 0;
+            isFlipped = false;
+            currentGrammarTopic = null;
+            currentVocabMode = 'menu';
+            currentReadingQuestion = -1;
+            currentLifeExpectancyQuestion = -1;
+            currentGrammarQuestion = -1;
+            currentVocabQuestion = -1;
+            userAnswers = {};
+            const config = window.elementSdk?.config || defaultConfig;
+            updateTabStyles(config);
+            renderContent(config);
+        }
+
+        function updateTabStyles(config) {
+            const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+            const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+            const textColor = config.text_color || defaultConfig.text_color;
+            
+            ['vocab', 'reading', 'grammar', 'life-expectancy'].forEach(section => {
+                const tab = document.getElementById(`tab-${section}`);
+                if (tab) {
+                    if (section === currentSection) {
+                        tab.style.backgroundColor = primaryColor;
+                        tab.style.color = 'white';
+                    } else {
+                        tab.style.backgroundColor = secondaryColor;
+                        tab.style.color = 'white';
+                    }
+                }
+            });
+        }
+
+        function renderContent(config) {
+            const contentArea = document.getElementById('content-area');
+            const baseSize = config.font_size || defaultConfig.font_size;
+            const customFont = config.font_family || defaultConfig.font_family;
+            const textColor = config.text_color || defaultConfig.text_color;
+            const surfaceColor = config.surface_color || defaultConfig.surface_color;
+            const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+            const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+            
+            if (currentSection === 'vocab') {
+                renderVocabSection(contentArea, config);
+            } else if (currentSection === 'reading') {
+                renderReading(contentArea, config);
+            } else if (currentSection === 'life-expectancy') {
+                renderLifeExpectancy(contentArea, config);
+            } else if (currentSection === 'grammar') {
+                renderGrammar(contentArea, config);
+            }
+        }
+
+        let currentVocabMode = 'menu'; // 'menu', 'flashcard', 'quiz'
+
+        function renderVocabSection(container, config) {
+            const baseSize = config.font_size || defaultConfig.font_size;
+            const customFont = config.font_family || defaultConfig.font_family;
+            const textColor = config.text_color || defaultConfig.text_color;
+            const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+            const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+            
+            if (currentVocabMode === 'menu') {
+                container.innerHTML = `
+                    <div class="max-w-4xl mx-auto">
+                        <h2 class="font-bold mb-6" style="font-size: ${baseSize * 1.5}px; color: ${textColor}; font-family: ${customFont}, Arial, sans-serif;">
+                            Chọn cách học từ vựng
+                        </h2>
+                        
+                        <div class="grid gap-4">
+                            <button onclick="selectVocabMode('flashcard')" 
+                                    class="p-6 rounded-lg text-left transition-colors"
+                                    style="background-color: ${primaryColor}; color: white; font-size: ${baseSize * 1.1}px; font-family: ${customFont}, Arial, sans-serif;">
+                                <div class="font-bold mb-2">📚 Học từ Flashcard</div>
+                                <div style="font-size: ${baseSize * 0.875}px;">Học từ vựng qua thẻ ghi nhớ với 58 từ</div>
+                            </button>
+                            
+                            <button onclick="selectVocabMode('quiz')" 
+                                    class="p-6 rounded-lg text-left transition-colors"
+                                    style="background-color: ${secondaryColor}; color: white; font-size: ${baseSize * 1.1}px; font-family: ${customFont}, Arial, sans-serif;">
+                                <div class="font-bold mb-2">📝 Kiểm tra từ vựng</div>
+                                <div style="font-size: ${baseSize * 0.875}px;">67 câu trắc nghiệm kiểm tra từ vựng</div>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else if (currentVocabMode === 'flashcard') {
+                renderVocabFlashcard(container, config);
+            } else if (currentVocabMode === 'quiz') {
+                renderVocabQuiz(container, config);
+            }
+        }
+
+        function renderVocabFlashcard(container, config) {
+            const vocab = vocabularyData[currentFlashcardIndex];
+            const baseSize = config.font_size || defaultConfig.font_size;
+            const customFont = config.font_family || defaultConfig.font_family;
+            const textColor = config.text_color || defaultConfig.text_color;
+            const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+            const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+            
+            container.innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <button onclick="backToVocabMenu()" 
+                            class="mb-6 px-4 py-2 rounded-lg transition-colors"
+                            style="background-color: ${secondaryColor}; color: white; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;">
+                        ← Quay lại
+                    </button>
+                    
+                    <div class="text-center mb-4" style="font-size: ${baseSize}px; color: ${textColor}; font-family: ${customFont}, Arial, sans-serif;">
+                        Thẻ ${currentFlashcardIndex + 1} / ${vocabularyData.length}
+                    </div>
+                    
+                    <div class="flashcard ${isFlipped ? 'flipped' : ''}" onclick="flipCard()" style="height: 300px; max-height: 50vh;">
+                        <div class="flashcard-inner">
+                            <div class="flashcard-front" style="background-color: ${primaryColor}; color: white;">
+                                <div class="text-center" style="font-size: ${baseSize * 2}px; font-weight: bold; font-family: ${customFont}, Arial, sans-serif;">
+                                    ${vocab.word}
+                                </div>
+                                <div class="text-center" style="font-size: ${baseSize * 1.1}px; margin-top: 0.75rem; font-family: ${customFont}, Arial, sans-serif;">
+                                    ${vocab.ipa}
+                                </div>
+                                <button onclick="event.stopPropagation(); pronounceWord('${vocab.word}')" 
+                                        class="mt-3 px-3 py-2 rounded-lg transition-colors text-sm"
+                                        style="background-color: rgba(255,255,255,0.2); color: white; font-size: ${baseSize * 0.8}px; font-family: ${customFont}, Arial, sans-serif; border: 1px solid rgba(255,255,255,0.3);">
+                                    🔊 Phát âm
+                                </button>
+                                <div class="text-center text-sm sm:text-base" style="font-size: ${baseSize * 0.8}px; margin-top: 0.75rem; font-style: italic; font-family: ${customFont}, Arial, sans-serif;">
+                                    Nhấn để lật thẻ
+                                </div>
+                            </div>
+                            
+                            <div class="flashcard-back" style="background-color: ${secondaryColor}; color: white;">
+                                <div class="text-center" style="font-size: ${baseSize * 1.3}px; font-weight: bold; margin-bottom: 0.75rem; font-family: ${customFont}, Arial, sans-serif;">
+                                    ${vocab.meaning}
+                                </div>
+                                <div class="text-center" style="font-size: ${baseSize * 0.9}px; margin-bottom: 0.5rem; font-family: ${customFont}, Arial, sans-serif;">
+                                    <span style="font-style: italic;">${vocab.type}</span>
+                                </div>
+                                <div class="text-center px-2" style="font-size: ${baseSize * 0.8}px; margin-top: 1rem; font-family: ${customFont}, Arial, sans-serif; line-height: 1.4;">
+                                    <strong>Ví dụ:</strong><br>${vocab.example}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-center gap-2 sm:gap-4 mt-6 flex-wrap">
+                        <button onclick="previousCard()" class="px-4 py-2 sm:px-6 sm:py-3 rounded-lg font-semibold transition-colors text-sm sm:text-base" 
+                                style="background-color: ${secondaryColor}; color: white; font-size: ${baseSize * 0.875}px; font-family: ${customFont}, Arial, sans-serif;"
+                                ${currentFlashcardIndex === 0 ? 'disabled style="opacity: 0.5;"' : ''}>
+                            ← Lùi
+                        </button>
+                        <button onclick="flipCard()" class="px-4 py-2 sm:px-6 sm:py-3 rounded-lg font-semibold transition-colors text-sm sm:text-base" 
+                                style="background-color: ${primaryColor}; color: white; font-size: ${baseSize * 0.875}px; font-family: ${customFont}, Arial, sans-serif;">
+                            Lật thẻ
+                        </button>
+                        <button onclick="nextCard()" class="px-4 py-2 sm:px-6 sm:py-3 rounded-lg font-semibold transition-colors text-sm sm:text-base" 
+                                style="background-color: ${secondaryColor}; color: white; font-size: ${baseSize * 0.875}px; font-family: ${customFont}, Arial, sans-serif;"
+                                ${currentFlashcardIndex === vocabularyData.length - 1 ? 'disabled style="opacity: 0.5;"' : ''}>
+                            Tiếp →
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        let currentReadingQuestion = 0;
+
+        function renderReading(container, config) {
+            const baseSize = config.font_size || defaultConfig.font_size;
+            const customFont = config.font_family || defaultConfig.font_family;
+            const textColor = config.text_color || defaultConfig.text_color;
+            const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+            const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+            
+            if (currentReadingQuestion === -1) {
+                // Show reading text
+                container.innerHTML = `
+                    <div class="max-w-4xl mx-auto">
+                        <h2 class="font-bold mb-6" style="font-size: ${baseSize * 1.5}px; color: ${textColor}; font-family: ${customFont}, Arial, sans-serif;">
+                            Bài đọc: Health and Longevity
+                        </h2>
+                        
+                        <div class="mb-8 leading-relaxed space-y-4" style="font-size: ${baseSize}px; color: ${textColor}; font-family: ${customFont}, Arial, sans-serif;">
+                            ${readingText}
+                        </div>
+                        
+                        <div class="flex justify-center">
+                            <button onclick="startReadingQuiz()" 
+                                    class="px-8 py-4 rounded-lg font-bold text-lg transition-colors"
+                                    style="background-color: ${primaryColor}; color: white; font-size: ${baseSize * 1.1}px; font-family: ${customFont}, Arial, sans-serif;">
+                                Bắt đầu làm câu hỏi →
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Show current question
+                const q = readingQuestions[currentReadingQuestion];
+                const isAnswered = userAnswers[`reading-${currentReadingQuestion}`] !== undefined;
+                
+                container.innerHTML = `
+                    <div class="max-w-4xl mx-auto">
+                        <div class="mb-6 flex justify-between items-center">
+                            <button onclick="backToReadingText()" 
+                                    class="px-4 py-2 rounded-lg transition-colors"
+                                    style="background-color: ${secondaryColor}; color: white; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;">
+                                ← Quay lại bài đọc
+                            </button>
+                            <div style="font-size: ${baseSize}px; color: ${textColor}; font-family: ${customFont}, Arial, sans-serif;">
+                                Câu ${currentReadingQuestion + 1} / ${readingQuestions.length}
+                            </div>
+                        </div>
+                        
+                        <div class="p-6 rounded-lg mb-6" style="background-color: rgba(0,0,0,0.05);">
+                            <div class="font-bold mb-4" style="font-size: ${baseSize * 1.25}px; color: ${textColor}; font-family: ${customFont}, Arial, sans-serif;">
+                                ${q.question}
+                            </div>
+                            
+                            <div class="space-y-3">
+                                ${q.options.map((opt, optIdx) => `
+                                    <button onclick="checkReadingAnswer(${currentReadingQuestion}, ${optIdx})" 
+                                            id="reading-q${currentReadingQuestion}-opt${optIdx}"
+                                            class="w-full text-left p-4 rounded-lg transition-colors ${isAnswered ? 'cursor-not-allowed' : 'hover:bg-gray-100'}"
+                                            style="background-color: white; color: ${textColor}; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif; border: 2px solid #e5e7eb;"
+                                            ${isAnswered ? 'disabled' : ''}>
+                                        ${String.fromCharCode(65 + optIdx)}. ${opt}
+                                    </button>
+                                `).join('')}
+                            </div>
+                            
+                            <div id="reading-feedback-${currentReadingQuestion}" class="mt-4" style="font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;"></div>
+                        </div>
+                        
+                        <div class="flex justify-between">
+                            <button onclick="previousReadingQuestion()" 
+                                    class="px-6 py-3 rounded-lg font-semibold transition-colors ${currentReadingQuestion === 0 ? 'opacity-50 cursor-not-allowed' : ''}"
+                                    style="background-color: ${secondaryColor}; color: white; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;"
+                                    ${currentReadingQuestion === 0 ? 'disabled' : ''}>
+                                ← Trước
+                            </button>
+                            
+                            <button onclick="nextReadingQuestion()" 
+                                    class="px-6 py-3 rounded-lg font-semibold transition-colors ${currentReadingQuestion === readingQuestions.length - 1 ? 'opacity-50 cursor-not-allowed' : ''}"
+                                    style="background-color: ${primaryColor}; color: white; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;"
+                                    ${currentReadingQuestion === readingQuestions.length - 1 ? 'disabled' : ''}>
+                                Tiếp →
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                // Restore previous answer if exists
+                if (isAnswered) {
+                    restoreReadingAnswer(currentReadingQuestion);
+                }
+            }
+        }
+
+        let currentLifeExpectancyQuestion = -1;
+
+        function renderLifeExpectancy(container, config) {
+            const baseSize = config.font_size || defaultConfig.font_size;
+            const customFont = config.font_family || defaultConfig.font_family;
+            const textColor = config.text_color || defaultConfig.text_color;
+            const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+            const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+            
+            // Always show life expectancy content (no questions)
+            container.innerHTML = `
+                <div class="max-w-4xl mx-auto">
+                    <h2 class="font-bold mb-6" style="font-size: ${baseSize * 1.5}px; color: ${textColor}; font-family: ${customFont}, Arial, sans-serif;">
+                        Life Expectancy - How to Live Longer and Healthier
+                    </h2>
+                    
+                    <div class="mb-8 leading-relaxed space-y-4" style="font-size: ${baseSize}px; color: ${textColor}; font-family: ${customFont}, Arial, sans-serif;">
+                        ${lifeExpectancyText}
+                    </div>
+                    
+                    <div class="text-center mt-8">
+                        <div class="p-4 rounded-lg mb-4" style="background-color: rgba(34, 197, 94, 0.1); border: 2px solid #22c55e;">
+                            <div class="font-bold mb-2" style="color: #16a34a; font-size: ${baseSize * 1.1}px; font-family: ${customFont}, Arial, sans-serif;">
+                                🎉 Congratulations! You've completed the Life Expectancy section!
+                            </div>
+                            <div style="color: ${textColor}; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;">
+                                You now have practical tips for living a longer, healthier life. Your progress has been automatically updated to 100%.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Automatically set progress to 100% when viewing content
+            setTimeout(async () => {
+                await saveProgress('life-expectancy', 100);
+            }, 1000);
+        }
+
+        function renderGrammar(container, config) {
+            const baseSize = config.font_size || defaultConfig.font_size;
+            const customFont = config.font_family || defaultConfig.font_family;
+            const textColor = config.text_color || defaultConfig.text_color;
+            const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+            const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+            
+            if (!currentGrammarTopic) {
+                container.innerHTML = `
+                    <div class="max-w-4xl mx-auto">
+                        <h2 class="font-bold mb-6" style="font-size: ${baseSize * 1.5}px; color: ${textColor}; font-family: ${customFont}, Arial, sans-serif;">
+                            Chọn nội dung học
+                        </h2>
+                        
+                        <div class="grid gap-4">
+                            <button onclick="selectGrammarTopic('must_vs_have_to')" 
+                                    class="p-6 rounded-lg text-left transition-colors"
+                                    style="background-color: ${primaryColor}; color: white; font-size: ${baseSize * 1.1}px; font-family: ${customFont}, Arial, sans-serif;">
+                                <div class="font-bold mb-2">Modals: must vs have to</div>
+                                <div style="font-size: ${baseSize * 0.875}px;">Học cách sử dụng must và have to</div>
+                            </button>
+                            
+                            <button onclick="selectGrammarTopic('mustnt_vs_dont_have_to')" 
+                                    class="p-6 rounded-lg text-left transition-colors"
+                                    style="background-color: ${primaryColor}; color: white; font-size: ${baseSize * 1.1}px; font-family: ${customFont}, Arial, sans-serif;">
+                                <div class="font-bold mb-2">Phân biệt mustn't vs don't/doesn't have to</div>
+                                <div style="font-size: ${baseSize * 0.875}px;">Hiểu sự khác biệt giữa cấm đoán và không cần thiết</div>
+                            </button>
+                            
+                            <button onclick="selectGrammarTopic('exercises')" 
+                                    class="p-6 rounded-lg text-left transition-colors"
+                                    style="background-color: ${secondaryColor}; color: white; font-size: ${baseSize * 1.1}px; font-family: ${customFont}, Arial, sans-serif;">
+                                <div class="font-bold mb-2">Bài tập tổng hợp</div>
+                                <div style="font-size: ${baseSize * 0.875}px;">30 câu trắc nghiệm</div>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else if (currentGrammarTopic === 'exercises') {
+                renderGrammarExercises(container, config);
+            } else {
+                const topic = grammarTopics[currentGrammarTopic];
+                container.innerHTML = `
+                    <div class="max-w-4xl mx-auto">
+                        <button onclick="backToGrammarMenu()" 
+                                class="mb-6 px-4 py-2 rounded-lg transition-colors"
+                                style="background-color: ${secondaryColor}; color: white; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;">
+                            ← Quay lại
+                        </button>
+                        
+                        <div class="prose max-w-none" style="color: ${textColor}; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;">
+                            ${topic.content}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        let currentGrammarQuestion = -1;
+
+        function renderGrammarExercises(container, config) {
+            const baseSize = config.font_size || defaultConfig.font_size;
+            const customFont = config.font_family || defaultConfig.font_family;
+            const textColor = config.text_color || defaultConfig.text_color;
+            const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+            const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+            
+            if (currentGrammarQuestion === -1) {
+                // Show exercise menu
+                container.innerHTML = `
+                    <div class="max-w-4xl mx-auto">
+                        <button onclick="backToGrammarMenu()" 
+                                class="mb-6 px-4 py-2 rounded-lg transition-colors"
+                                style="background-color: ${secondaryColor}; color: white; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;">
+                            ← Quay lại
+                        </button>
+                        
+                        <h2 class="font-bold mb-6" style="font-size: ${baseSize * 1.5}px; color: ${textColor}; font-family: ${customFont}, Arial, sans-serif;">
+                            Bài tập tổng hợp (30 câu)
+                        </h2>
+                        
+                        <div class="flex justify-center">
+                            <button onclick="startGrammarExercises()" 
+                                    class="px-8 py-4 rounded-lg font-bold text-lg transition-colors"
+                                    style="background-color: ${primaryColor}; color: white; font-size: ${baseSize * 1.1}px; font-family: ${customFont}, Arial, sans-serif;">
+                                Bắt đầu làm bài tập →
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Show current question
+                const q = grammarExercises[currentGrammarQuestion];
+                const isAnswered = userAnswers[`grammar-${currentGrammarQuestion}`] !== undefined;
+                
+                container.innerHTML = `
+                    <div class="max-w-4xl mx-auto">
+                        <div class="mb-6 flex justify-between items-center">
+                            <button onclick="backToGrammarExerciseMenu()" 
+                                    class="px-4 py-2 rounded-lg transition-colors"
+                                    style="background-color: ${secondaryColor}; color: white; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;">
+                                ← Quay lại menu
+                            </button>
+                            <div style="font-size: ${baseSize}px; color: ${textColor}; font-family: ${customFont}, Arial, sans-serif;">
+                                Câu ${currentGrammarQuestion + 1} / ${grammarExercises.length}
+                            </div>
+                        </div>
+                        
+                        <div class="p-6 rounded-lg mb-6" style="background-color: rgba(0,0,0,0.05);">
+                            <div class="font-bold mb-4" style="font-size: ${baseSize * 1.25}px; color: ${textColor}; font-family: ${customFont}, Arial, sans-serif;">
+                                ${q.question}
+                            </div>
+                            
+                            <div class="space-y-3">
+                                ${q.options.map((opt, optIdx) => `
+                                    <button onclick="checkGrammarAnswer(${currentGrammarQuestion}, ${optIdx})" 
+                                            id="grammar-q${currentGrammarQuestion}-opt${optIdx}"
+                                            class="w-full text-left p-4 rounded-lg transition-colors ${isAnswered ? 'cursor-not-allowed' : 'hover:bg-gray-100'}"
+                                            style="background-color: white; color: ${textColor}; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif; border: 2px solid #e5e7eb;"
+                                            ${isAnswered ? 'disabled' : ''}>
+                                        ${String.fromCharCode(65 + optIdx)}. ${opt}
+                                    </button>
+                                `).join('')}
+                            </div>
+                            
+                            <div id="grammar-feedback-${currentGrammarQuestion}" class="mt-4" style="font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;"></div>
+                        </div>
+                        
+                        <div class="flex justify-between">
+                            <button onclick="previousGrammarQuestion()" 
+                                    class="px-6 py-3 rounded-lg font-semibold transition-colors ${currentGrammarQuestion === 0 ? 'opacity-50 cursor-not-allowed' : ''}"
+                                    style="background-color: ${secondaryColor}; color: white; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;"
+                                    ${currentGrammarQuestion === 0 ? 'disabled' : ''}>
+                                ← Trước
+                            </button>
+                            
+                            <button onclick="nextGrammarQuestion()" 
+                                    class="px-6 py-3 rounded-lg font-semibold transition-colors ${currentGrammarQuestion === grammarExercises.length - 1 ? 'opacity-50 cursor-not-allowed' : ''}"
+                                    style="background-color: ${primaryColor}; color: white; font-size: ${baseSize}px; font-family: ${customFont}, Arial, sans-serif;"
+                                    ${currentGrammarQuestion === grammarExercises.length - 1 ? 'disabled' : ''}>
+                                Tiếp →
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                // Restore previous answer if exists
+                if (isAnswered) {
+                    restoreGrammarAnswer(currentGrammarQuestion);
+                }
+            }
+        }
+
+        function flipCard() {
+            isFlipped = !isFlipped;
+            const flashcard = document.querySelector('.flashcard');
+            if (flashcard) {
+                if (isFlipped) {
+                    flashcard.classList.add('flipped');
+                } else {
+                    flashcard.classList.remove('flipped');
+                }
+            }
+        }
+
+        function nextCard() {
+            if (currentFlashcardIndex < vocabularyData.length - 1) {
+                currentFlashcardIndex++;
+                isFlipped = false;
+                const config = window.elementSdk?.config || defaultConfig;
+                renderContent(config);
+                updateVocabProgress();
+                
+                // Auto-pronounce the new word after a short delay
+                setTimeout(() => {
+                    const newWord = vocabularyData[currentFlashcardIndex].word;
+                    pronounceWord(newWord);
+                }, 300);
+            }
+        }
+
+        function previousCard() {
+            if (currentFlashcardIndex > 0) {
+                currentFlashcardIndex--;
+                isFlipped = false;
+                const config = window.elementSdk?.config || defaultConfig;
+                renderContent(config);
+                
+                // Auto-pronounce the new word after a short delay
+                setTimeout(() => {
+                    const newWord = vocabularyData[currentFlashcardIndex].word;
+                    pronounceWord(newWord);
+                }, 300);
+            }
+        }
+
+        function selectGrammarTopic(topic) {
+            currentGrammarTopic = topic;
+            userAnswers = {};
+            const config = window.elementSdk?.config || defaultConfig;
+            renderContent(config);
+        }
+
+        function backToGrammarMenu() {
+            currentGrammarTopic = null;
+            const config = window.elementSdk?.config || defaultConfig;
+            renderContent(config);
+        }
+
+        function startReadingQuiz() {
+            currentReadingQuestion = 0;
+            const config = window.elementSdk?.config || defaultConfig;
+            renderContent(config);
+        }
+
+        function backToReadingText() {
+            currentReadingQuestion = -1;
+            const config = window.elementSdk?.config || defaultConfig;
+            renderContent(config);
+        }
+
+        function nextReadingQuestion() {
+            if (currentReadingQuestion < readingQuestions.length - 1) {
+                currentReadingQuestion++;
+                const config = window.elementSdk?.config || defaultConfig;
+                renderContent(config);
+            }
+        }
+
+        function previousReadingQuestion() {
+            if (currentReadingQuestion > 0) {
+                currentReadingQuestion--;
+                const config = window.elementSdk?.config || defaultConfig;
+                renderContent(config);
+            }
+        }
+
+        function restoreReadingAnswer(questionIdx) {
+            const question = readingQuestions[questionIdx];
+            const userAnswer = userAnswers[`reading-${questionIdx}`];
+            const selectedOption = userAnswers[`reading-selected-${questionIdx}`];
+            
+            if (selectedOption !== undefined) {
+                // Restore the visual state
+                for (let i = 0; i < question.options.length; i++) {
+                    const btn = document.getElementById(`reading-q${questionIdx}-opt${i}`);
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.style.cursor = 'not-allowed';
+                        
+                        if (i === question.correct) {
+                            // Always highlight the correct answer in green
+                            btn.style.backgroundColor = '#22c55e';
+                            btn.style.color = 'white';
+                            btn.style.border = '2px solid #16a34a';
+                            btn.style.fontWeight = 'bold';
+                            btn.style.opacity = '1';
+                        } else if (i === selectedOption && !userAnswer) {
+                            // Highlight wrong answer in red
+                            btn.style.backgroundColor = '#ef4444';
+                            btn.style.color = 'white';
+                            btn.style.border = '2px solid #dc2626';
+                            btn.style.opacity = '1';
+                        } else {
+                            // Gray out other options
+                            btn.style.backgroundColor = '#f3f4f6';
+                            btn.style.color = '#6b7280';
+                            btn.style.border = '2px solid #e5e7eb';
+                            btn.style.opacity = '0.6';
+                        }
+                    }
+                }
+                
+                const feedback = document.getElementById(`reading-feedback-${questionIdx}`);
+                if (feedback) {
+                    if (userAnswer) {
+                        feedback.innerHTML = '<span style="color: #22c55e; font-weight: bold;">✓ Chính xác!</span>';
+                    } else {
+                        feedback.innerHTML = `<span style="color: #ef4444; font-weight: bold;">✗ Sai rồi. Đáp án đúng là: ${String.fromCharCode(65 + question.correct)}. ${question.options[question.correct]}</span>`;
+                    }
+                }
+            }
+        }
+
+        async function checkReadingAnswer(questionIdx, optionIdx) {
+            const question = readingQuestions[questionIdx];
+            const isCorrect = optionIdx === question.correct;
+            const config = window.elementSdk?.config || defaultConfig;
+            const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+            
+            // Play sound based on answer
+            if (isCorrect) {
+                playCorrectSound();
+            } else {
+                playWrongSound();
+            }
+            
+            // Disable all buttons for this question to prevent multiple answers
+            for (let i = 0; i < question.options.length; i++) {
+                const btn = document.getElementById(`reading-q${questionIdx}-opt${i}`);
+                if (btn) {
+                    btn.disabled = true;
+                    btn.style.cursor = 'not-allowed';
+                    
+                    if (i === question.correct) {
+                        // Always highlight the correct answer in green
+                        btn.style.backgroundColor = '#22c55e';
+                        btn.style.color = 'white';
+                        btn.style.border = '2px solid #16a34a';
+                        btn.style.fontWeight = 'bold';
+                        btn.style.opacity = '1';
+                    } else if (i === optionIdx && !isCorrect) {
+                        // Highlight wrong answer in red
+                        btn.style.backgroundColor = '#ef4444';
+                        btn.style.color = 'white';
+                        btn.style.border = '2px solid #dc2626';
+                        btn.style.opacity = '1';
+                    } else {
+                        // Gray out other options
+                        btn.style.backgroundColor = '#f3f4f6';
+                        btn.style.color = '#6b7280';
+                        btn.style.border = '2px solid #e5e7eb';
+                        btn.style.opacity = '0.6';
+                    }
+                }
+            }
+            
+            const feedback = document.getElementById(`reading-feedback-${questionIdx}`);
+            if (feedback) {
+                if (isCorrect) {
+                    feedback.innerHTML = '<span style="color: #22c55e; font-weight: bold;">✓ Chính xác!</span>';
+                    feedback.classList.add('correct-animation');
+                } else {
+                    feedback.innerHTML = `<span style="color: #ef4444; font-weight: bold;">✗ Sai rồi. Đáp án đúng là: ${String.fromCharCode(65 + question.correct)}. ${question.options[question.correct]}</span>`;
+                    feedback.classList.add('wrong-animation');
+                }
+            }
+            
+            userAnswers[`reading-${questionIdx}`] = isCorrect;
+            userAnswers[`reading-selected-${questionIdx}`] = optionIdx;
+            await updateReadingProgress();
+        }
+
+        async function checkGrammarAnswer(questionIdx, optionIdx) {
+            const question = grammarExercises[questionIdx];
+            const isCorrect = optionIdx === question.correct;
+            const config = window.elementSdk?.config || defaultConfig;
+            
+            // Play sound based on answer
+            if (isCorrect) {
+                playCorrectSound();
+            } else {
+                playWrongSound();
+            }
+            
+            // Disable all buttons for this question to prevent multiple answers
+            for (let i = 0; i < question.options.length; i++) {
+                const btn = document.getElementById(`grammar-q${questionIdx}-opt${i}`);
+                if (btn) {
+                    btn.disabled = true;
+                    btn.style.cursor = 'not-allowed';
+                    
+                    if (i === question.correct) {
+                        // Always highlight the correct answer in green
+                        btn.style.backgroundColor = '#22c55e';
+                        btn.style.color = 'white';
+                        btn.style.border = '2px solid #16a34a';
+                        btn.style.fontWeight = 'bold';
+                        btn.style.opacity = '1';
+                    } else if (i === optionIdx && !isCorrect) {
+                        // Highlight wrong answer in red
+                        btn.style.backgroundColor = '#ef4444';
+                        btn.style.color = 'white';
+                        btn.style.border = '2px solid #dc2626';
+                        btn.style.opacity = '1';
+                    } else {
+                        // Gray out other options
+                        btn.style.backgroundColor = '#f3f4f6';
+                        btn.style.color = '#6b7280';
+                        btn.style.border = '2px solid #e5e7eb';
+                        btn.style.opacity = '0.6';
+                    }
+                }
+            }
+            
+            const feedback = document.getElementById(`grammar-feedback-${questionIdx}`);
+            if (feedback) {
+                if (isCorrect) {
+                    feedback.innerHTML = '<span style="color: #22c55e; font-weight: bold;">✓ Chính xác!</span>';
+                    feedback.classList.add('correct-animation');
+                } else {
+                    feedback.innerHTML = `<span style="color: #ef4444; font-weight: bold;">✗ Sai rồi. Đáp án đúng là: ${String.fromCharCode(65 + question.correct)}. ${question.options[question.correct]}</span>`;
+                    feedback.classList.add('wrong-animation');
+                }
+            }
+            
+            userAnswers[`grammar-${questionIdx}`] = isCorrect;
+            userAnswers[`grammar-selected-${questionIdx}`] = optionIdx;
+            await updateGrammarProgress();
+        }
+
+        async function checkLifeExpectancyAnswer(questionIdx, optionIdx) {
+            const question = lifeExpectancyQuestions[questionIdx];
+            const isCorrect = optionIdx === question.correct;
+            const config = window.elementSdk?.config || defaultConfig;
+            
+            // Play sound based on answer
+            if (isCorrect) {
+                playCorrectSound();
+            } else {
+                playWrongSound();
+            }
+            
+            // Disable all buttons for this question to prevent multiple answers
+            for (let i = 0; i < question.options.length; i++) {
+                const btn = document.getElementById(`life-expectancy-q${questionIdx}-opt${i}`);
+                if (btn) {
+                    btn.disabled = true;
+                    btn.style.cursor = 'not-allowed';
+                    
+                    if (i === question.correct) {
+                        // Always highlight the correct answer in green
+                        btn.style.backgroundColor = '#22c55e';
+                        btn.style.color = 'white';
+                        btn.style.border = '2px solid #16a34a';
+                        btn.style.fontWeight = 'bold';
+                        btn.style.opacity = '1';
+                    } else if (i === optionIdx && !isCorrect) {
+                        // Highlight wrong answer in red
+                        btn.style.backgroundColor = '#ef4444';
+                        btn.style.color = 'white';
+                        btn.style.border = '2px solid #dc2626';
+                        btn.style.opacity = '1';
+                    } else {
+                        // Gray out other options
+                        btn.style.backgroundColor = '#f3f4f6';
+                        btn.style.color = '#6b7280';
+                        btn.style.border = '2px solid #e5e7eb';
+                        btn.style.opacity = '0.6';
+                    }
+                }
+            }
+            
+            const feedback = document.getElementById(`life-expectancy-feedback-${questionIdx}`);
+            if (feedback) {
+                if (isCorrect) {
+                    feedback.innerHTML = '<span style="color: #22c55e; font-weight: bold;">✓ Chính xác!</span>';
+                    feedback.classList.add('correct-animation');
+                } else {
+                    feedback.innerHTML = `<span style="color: #ef4444; font-weight: bold;">✗ Sai rồi. Đáp án đúng là: ${String.fromCharCode(65 + question.correct)}. ${question.options[question.correct]}</span>`;
+                    feedback.classList.add('wrong-animation');
+                }
+            }
+            
+            userAnswers[`life-expectancy-${questionIdx}`] = isCorrect;
+            await updateLifeExpectancyProgress();
+        }
+
+        function selectVocabMode(mode) {
+            currentVocabMode = mode;
+            userAnswers = {};
+            const config = window.elementSdk?.config || defaultConfig;
+            renderContent(config);
+        }
+
+        function backToVocabMenu() {
+            currentVocabMode = 'menu';
+            const config = window.elementSdk?.config || defaultConfig;
+            renderContent(config);
+        }
+
+        async function checkVocabAnswer(questionIdx, optionIdx) {
+            const question = vocabularyQuiz[questionIdx];
+            const isCorrect = optionIdx === question.correct;
+            const config = window.elementSdk?.config || defaultConfig;
+            
+            // Play sound based on answer
+            if (isCorrect) {
+                playCorrectSound();
+            } else {
+                playWrongSound();
+            }
+            
+            // Disable all buttons for this question to prevent multiple answers
+            for (let i = 0; i < question.options.length; i++) {
+                const btn = document.getElementById(`vocab-q${questionIdx}-opt${i}`);
+                if (btn) {
+                    btn.disabled = true;
+                    btn.style.cursor = 'not-allowed';
+                    
+                    if (i === question.correct) {
+                        // Always highlight the correct answer in green
+                        btn.style.backgroundColor = '#22c55e';
+                        btn.style.color = 'white';
+                        btn.style.border = '2px solid #16a34a';
+                        btn.style.fontWeight = 'bold';
+                        btn.style.opacity = '1';
+                    } else if (i === optionIdx && !isCorrect) {
+                        // Highlight wrong answer in red
+                        btn.style.backgroundColor = '#ef4444';
+                        btn.style.color = 'white';
+                        btn.style.border = '2px solid #dc2626';
+                        btn.style.opacity = '1';
+                    } else {
+                        // Gray out other options
+                        btn.style.backgroundColor = '#f3f4f6';
+                        btn.style.color = '#6b7280';
+                        btn.style.border = '2px solid #e5e7eb';
+                        btn.style.opacity = '0.6';
+                    }
+                }
+            }
+            
+            const feedback = document.getElementById(`vocab-feedback-${questionIdx}`);
+            if (feedback) {
+                if (isCorrect) {
+                    feedback.innerHTML = '<span style="color: #22c55e; font-weight: bold;">✓ Chính xác!</span>';
+                    feedback.classList.add('correct-animation');
+                } else {
+                    feedback.innerHTML = `<span style="color: #ef4444; font-weight: bold;">✗ Sai rồi. Đáp án đúng là: ${String.fromCharCode(65 + question.correct)}. ${question.options[question.correct]}</span>`;
+                    feedback.classList.add('wrong-animation');
+                }
+            }
+            
+            userAnswers[`vocab-${questionIdx}`] = isCorrect;
+            userAnswers[`vocab-selected-${questionIdx}`] = optionIdx;
+            await updateVocabProgress();
+        }
+
+        async function updateVocabProgress() {
+            let progress = 0;
+            if (currentVocabMode === 'flashcard') {
+                progress = Math.round(((currentFlashcardIndex + 1) / vocabularyData.length) * 100);
+            } else if (currentVocabMode === 'quiz') {
+                const answeredCount = Object.keys(userAnswers).filter(k => k.startsWith('vocab-') && !k.includes('selected')).length;
+                progress = Math.round((answeredCount / vocabularyQuiz.length) * 100);
+            }
+            
+            console.log(`Updating vocab progress to ${progress}%`);
+            await saveProgress('vocab', progress);
+            
+            // Update display immediately with new progress
+            updateProgressCircle(1, progress); // vocab is index 1
+            
+            // Update total progress after vocab progress changes
+            setTimeout(() => {
+                updateTotalProgress();
+            }, 100);
+        }
+
+        async function updateReadingProgress() {
+            const answeredCount = Object.keys(userAnswers).filter(k => k.startsWith('reading-') && !k.includes('selected')).length;
+            const progress = Math.round((answeredCount / readingQuestions.length) * 100);
+            
+            console.log(`Updating reading progress to ${progress}%`);
+            await saveProgress('reading', progress);
+            
+            // Update display immediately with new progress
+            updateProgressCircle(2, progress); // reading is index 2
+            
+            // Update total progress after reading progress changes
+            setTimeout(() => {
+                updateTotalProgress();
+            }, 100);
+        }
+
+        async function updateGrammarProgress() {
+            const answeredCount = Object.keys(userAnswers).filter(k => k.startsWith('grammar-') && !k.includes('selected')).length;
+            const progress = Math.round((answeredCount / grammarExercises.length) * 100);
+            
+            console.log(`Updating grammar progress to ${progress}%`);
+            await saveProgress('grammar', progress);
+            
+            // Update display immediately with new progress
+            updateProgressCircle(3, progress); // grammar is index 3
+            
+            // Update total progress after grammar progress changes
+            setTimeout(() => {
+                updateTotalProgress();
+            }, 100);
+        }
+
+        async function updateLifeExpectancyProgress() {
+            const answeredCount = Object.keys(userAnswers).filter(k => k.startsWith('life-expectancy-')).length;
+            const progress = Math.round((answeredCount / lifeExpectancyQuestions.length) * 100);
+            
+            console.log(`Updating life expectancy progress to ${progress}%`);
+            await saveProgress('life-expectancy', progress);
+            
+            // Update total progress as well
+            updateTotalProgress();
+        }
+
+        async function saveProgress(type, value) {
+            try {
+                console.log(`🔄 Attempting to save progress: ${type} = ${value}%`);
+                
+                const existing = currentData.find(d => d.type === type);
+                
+                if (existing) {
+                    // Update existing record
+                    const updated = { ...existing, progress: value };
+                    console.log('📝 Updating existing record:', updated);
+                    
+                    const result = await window.dataSdk.update(updated);
+                    if (result.isOk) {
+                        console.log(`✅ Progress updated successfully: ${type} = ${value}%`);
+                        // Update local data immediately
+                        const index = currentData.findIndex(d => d.type === type);
+                        if (index !== -1) {
+                            currentData[index] = updated;
+                            console.log('📊 Local data updated:', currentData[index]);
+                        }
+                        
+                        // Force update total progress after successful save
+                        setTimeout(() => {
+                            console.log('🎯 Updating total progress after successful save');
+                            const newProgress = calculateProgress();
+                            console.log('📈 New calculated progress:', newProgress);
+                            updateProgressCircle(0, newProgress.total);
+                        }, 300);
+                        
+                    } else {
+                        console.error('❌ Failed to update progress:', result.error);
+                    }
+                } else {
+                    // Create new record
+                    const newRecord = {
+                        type: type,
+                        progress: value
+                    };
+                    console.log('🆕 Creating new record:', newRecord);
+                    
+                    const result = await window.dataSdk.create(newRecord);
+                    if (result.isOk) {
+                        console.log(`✅ Progress created successfully: ${type} = ${value}%`);
+                        // Add to local data immediately with temporary ID
+                        const tempRecord = { ...newRecord, __backendId: 'temp-' + Date.now() };
+                        currentData.push(tempRecord);
+                        console.log('📊 Local data added:', tempRecord);
+                        
+                        // Force update total progress after successful save
+                        setTimeout(() => {
+                            console.log('🎯 Updating total progress after successful create');
+                            const newProgress = calculateProgress();
+                            console.log('📈 New calculated progress:', newProgress);
+                            updateProgressCircle(0, newProgress.total);
+                        }, 300);
+                        
+                    } else {
+                        console.error('❌ Failed to save progress:', result.error);
+                    }
+                }
+                
+                // Log current data state
+                console.log('📋 Current data after save:', currentData);
+                
+            } catch (error) {
+                console.error('💥 Error in saveProgress:', error);
+            }
+        }
+
+        function calculateProgress() {
+            const vocabData = currentData.find(d => d.type === 'vocab');
+            const readingData = currentData.find(d => d.type === 'reading');
+            const grammarData = currentData.find(d => d.type === 'grammar');
+            const lifeExpectancyData = currentData.find(d => d.type === 'life-expectancy');
+            
+            const vocab = vocabData ? vocabData.progress : 0;
+            const reading = readingData ? readingData.progress : 0;
+            const grammar = grammarData ? grammarData.progress : 0;
+            const lifeExpectancy = lifeExpectancyData ? lifeExpectancyData.progress : 0;
+            
+            // Tính tổng chỉ dựa trên 3 phần chính: vocab, reading, grammar
+            const total = Math.round((vocab + reading + grammar) / 3);
+            
+            return { total, vocab, reading, grammar, lifeExpectancy };
+        }
+
+        function updateProgressCircle(index, value) {
+            const progressElements = document.querySelectorAll('.progress-ring-circle');
+            const progressLabels = document.querySelectorAll('.progress-ring + div .font-bold');
+            
+            if (progressElements[index] && progressLabels[index]) {
+                const radius = 35;
+                const circumference = 2 * Math.PI * radius;
+                const offset = circumference - (value / 100) * circumference;
+                
+                progressElements[index].style.strokeDashoffset = offset;
+                progressLabels[index].textContent = `${value}%`;
+                
+                console.log(`Progress circle ${index} updated to ${value}%`);
+            }
+        }
+
+        function updateTotalProgress() {
+            const progress = calculateProgress();
+            console.log('🧮 Calculating total progress:', progress);
+            console.log(`📊 Individual progress - Vocab: ${progress.vocab}%, Reading: ${progress.reading}%, Grammar: ${progress.grammar}%`);
+            console.log(`🎯 Total progress calculated: ${progress.total}%`);
+            updateProgressCircle(0, progress.total); // total is index 0
+            
+            // Also update the DOM directly to ensure it shows
+            const totalProgressElement = document.querySelector('.progress-ring + div .font-bold');
+            if (totalProgressElement) {
+                totalProgressElement.textContent = `${progress.total}%`;
+                console.log(`✅ Total progress DOM updated to: ${progress.total}%`);
+            }
+        }
+
+        function updateProgressDisplay() {
+            const progress = calculateProgress();
+            console.log('🔄 Updating progress display with:', progress);
+            
+            // Update all progress circles with detailed logging
+            console.log(`📊 Updating circles - Total: ${progress.total}%, Vocab: ${progress.vocab}%, Reading: ${progress.reading}%, Grammar: ${progress.grammar}%`);
+            
+            updateProgressCircle(0, progress.total);
+            updateProgressCircle(1, progress.vocab);
+            updateProgressCircle(2, progress.reading);
+            updateProgressCircle(3, progress.grammar);
+            
+            // Force update DOM elements directly
+            const progressLabels = document.querySelectorAll('.progress-ring + div .font-bold');
+            if (progressLabels.length >= 4) {
+                progressLabels[0].textContent = `${progress.total}%`;
+                progressLabels[1].textContent = `${progress.vocab}%`;
+                progressLabels[2].textContent = `${progress.reading}%`;
+                progressLabels[3].textContent = `${progress.grammar}%`;
+                console.log('✅ All progress labels updated directly');
+            }
+            
+            console.log('✅ All progress updated:', progress);
+        }
+
+        function pronounceWord(word) {
+            if ('speechSynthesis' in window) {
+                // Cancel any ongoing speech
+                window.speechSynthesis.cancel();
+                
+                const utterance = new SpeechSynthesisUtterance(word);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.8;
+                utterance.pitch = 1;
+                utterance.volume = 0.8;
+                
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function playCorrectSound() {
+            // Create correct answer sound - cheerful ascending notes
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // Play a happy chord progression
+            const frequencies = [523.25, 659.25, 783.99]; // C5, E5, G5
+            let startTime = audioContext.currentTime;
+            
+            frequencies.forEach((freq, index) => {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                
+                osc.frequency.setValueAtTime(freq, startTime + index * 0.1);
+                osc.type = 'sine';
+                
+                gain.gain.setValueAtTime(0, startTime + index * 0.1);
+                gain.gain.linearRampToValueAtTime(0.3, startTime + index * 0.1 + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.01, startTime + index * 0.1 + 0.4);
+                
+                osc.start(startTime + index * 0.1);
+                osc.stop(startTime + index * 0.1 + 0.4);
+            });
+        }
+
+        function playWrongSound() {
+            // Create wrong answer sound - descending buzzer
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // Play descending buzzer sound
+            const startTime = audioContext.currentTime;
+            
+            oscillator.frequency.setValueAtTime(200, startTime);
+            oscillator.frequency.exponentialRampToValueAtTime(100, startTime + 0.5);
+            oscillator.type = 'sawtooth';
+            
+            gainNode.gain.setValueAtTime(0, startTime);
+            gainNode.gain.linearRampToValueAtTime(0.4, startTime + 0.05);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
+            
+            oscillator.start(startTime);
+            oscillator.stop(startTime + 0.5);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (currentSection === 'vocab') {
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    flipCard();
+                } else if (e.code === 'ArrowLeft') {
+                    e.preventDefault();
+                    previousCard();
+                } else if (e.code === 'ArrowRight') {
+                    e.preventDefault();
+                    nextCard();
+                }
+            }
+        });
+
+        // Add all navigation functions
+        function startVocabQuiz() {
+            currentVocabQuestion = 0;
+            const config = window.elementSdk?.config || defaultConfig;
+            renderContent(config);
+        }
+
+        function backToVocabQuizMenu() {
+            currentVocabQuestion = -1;
+            const config = window.elementSdk?.config || defaultConfig;
+            renderContent(config);
+        }
+
+        function nextVocabQuestion() {
+            if (currentVocabQuestion < vocabularyQuiz.length - 1) {
+                currentVocabQuestion++;
+                const config = window.elementSdk?.config || defaultConfig;
+                renderContent(config);
+            }
+        }
+
+        function previousVocabQuestion() {
+            if (currentVocabQuestion > 0) {
+                currentVocabQuestion--;
+                const config = window.elementSdk?.config || defaultConfig;
+                renderContent(config);
+            }
+        }
+
+        function restoreVocabAnswer(questionIdx) {
+            const question = vocabularyQuiz[questionIdx];
+            const userAnswer = userAnswers[`vocab-${questionIdx}`];
+            const selectedOption = userAnswers[`vocab-selected-${questionIdx}`];
+            
+            if (selectedOption !== undefined) {
+                // Restore the visual state
+                for (let i = 0; i < question.options.length; i++) {
+                    const btn = document.getElementById(`vocab-q${questionIdx}-opt${i}`);
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.style.cursor = 'not-allowed';
+                        
+                        if (i === question.correct) {
+                            // Always highlight the correct answer in green
+                            btn.style.backgroundColor = '#22c55e';
+                            btn.style.color = 'white';
+                            btn.style.border = '2px solid #16a34a';
+                            btn.style.fontWeight = 'bold';
+                            btn.style.opacity = '1';
+                        } else if (i === selectedOption && !userAnswer) {
+                            // Highlight wrong answer in red
+                            btn.style.backgroundColor = '#ef4444';
+                            btn.style.color = 'white';
+                            btn.style.border = '2px solid #dc2626';
+                            btn.style.opacity = '1';
+                        } else {
+                            // Gray out other options
+                            btn.style.backgroundColor = '#f3f4f6';
+                            btn.style.color = '#6b7280';
+                            btn.style.border = '2px solid #e5e7eb';
+                            btn.style.opacity = '0.6';
+                        }
+                    }
+                }
+                
+                const feedback = document.getElementById(`vocab-feedback-${questionIdx}`);
+                if (feedback) {
+                    if (userAnswer) {
+                        feedback.innerHTML = '<span style="color: #22c55e; font-weight: bold;">✓ Chính xác!</span>';
+                    } else {
+                        feedback.innerHTML = `<span style="color: #ef4444; font-weight: bold;">✗ Sai rồi. Đáp án đúng là: ${String.fromCharCode(65 + question.correct)}. ${question.options[question.correct]}</span>`;
+                    }
+                }
+            }
+        }
+
+        function startGrammarExercises() {
+            currentGrammarQuestion = 0;
+            const config = window.elementSdk?.config || defaultConfig;
+            renderContent(config);
+        }
+
+        function backToGrammarExerciseMenu() {
+            currentGrammarQuestion = -1;
+            const config = window.elementSdk?.config || defaultConfig;
+            renderContent(config);
+        }
+
+        function nextGrammarQuestion() {
+            if (currentGrammarQuestion < grammarExercises.length - 1) {
+                currentGrammarQuestion++;
+                const config = window.elementSdk?.config || defaultConfig;
+                renderContent(config);
+            }
+        }
+
+        function previousGrammarQuestion() {
+            if (currentGrammarQuestion > 0) {
+                currentGrammarQuestion--;
+                const config = window.elementSdk?.config || defaultConfig;
+                renderContent(config);
+            }
+        }
+
+        function restoreGrammarAnswer(questionIdx) {
+            const question = grammarExercises[questionIdx];
+            const userAnswer = userAnswers[`grammar-${questionIdx}`];
+            const selectedOption = userAnswers[`grammar-selected-${questionIdx}`];
+            
+            if (selectedOption !== undefined) {
+                // Restore the visual state
+                for (let i = 0; i < question.options.length; i++) {
+                    const btn = document.getElementById(`grammar-q${questionIdx}-opt${i}`);
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.style.cursor = 'not-allowed';
+                        
+                        if (i === question.correct) {
+                            // Always highlight the correct answer in green
+                            btn.style.backgroundColor = '#22c55e';
+                            btn.style.color = 'white';
+                            btn.style.border = '2px solid #16a34a';
+                            btn.style.fontWeight = 'bold';
+                            btn.style.opacity = '1';
+                        } else if (i === selectedOption && !userAnswer) {
+                            // Highlight wrong answer in red
+                            btn.style.backgroundColor = '#ef4444';
+                            btn.style.color = 'white';
+                            btn.style.border = '2px solid #dc2626';
+                            btn.style.opacity = '1';
+                        } else {
+                            // Gray out other options
+                            btn.style.backgroundColor = '#f3f4f6';
+                            btn.style.color = '#6b7280';
+                            btn.style.border = '2px solid #e5e7eb';
+                            btn.style.opacity = '0.6';
+                        }
+                    }
+                }
+                
+                const feedback = document.getElementById(`grammar-feedback-${questionIdx}`);
+                if (feedback) {
+                    if (userAnswer) {
+                        feedback.innerHTML = '<span style="color: #22c55e; font-weight: bold;">✓ Chính xác!</span>';
+                    } else {
+                        feedback.innerHTML = `<span style="color: #ef4444; font-weight: bold;">✗ Sai rồi. Đáp án đúng là: ${String.fromCharCode(65 + question.correct)}. ${question.options[question.correct]}</span>`;
+                    }
+                }
+            }
+        }
+
+        window.switchSection = switchSection;
+        window.flipCard = flipCard;
+        window.nextCard = nextCard;
+        window.previousCard = previousCard;
+        window.selectGrammarTopic = selectGrammarTopic;
+        window.backToGrammarMenu = backToGrammarMenu;
+        window.checkReadingAnswer = checkReadingAnswer;
+        window.startReadingQuiz = startReadingQuiz;
+        window.backToReadingText = backToReadingText;
+        window.nextReadingQuestion = nextReadingQuestion;
+        window.previousReadingQuestion = previousReadingQuestion;
+        window.checkGrammarAnswer = checkGrammarAnswer;
+        window.startGrammarExercises = startGrammarExercises;
+        window.backToGrammarExerciseMenu = backToGrammarExerciseMenu;
+        window.nextGrammarQuestion = nextGrammarQuestion;
+        window.previousGrammarQuestion = previousGrammarQuestion;
+        window.selectVocabMode = selectVocabMode;
+        window.backToVocabMenu = backToVocabMenu;
+        window.checkVocabAnswer = checkVocabAnswer;
+        window.startVocabQuiz = startVocabQuiz;
+        window.backToVocabQuizMenu = backToVocabQuizMenu;
+        window.nextVocabQuestion = nextVocabQuestion;
+        window.previousVocabQuestion = previousVocabQuestion;
+        window.checkLifeExpectancyAnswer = checkLifeExpectancyAnswer;
+        window.pronounceWord = pronounceWord;
+
+        initializeApp();
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'997c27d484e9c6f3',t:'MTc2MjAwODExMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
