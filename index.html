@@ -824,21 +824,62 @@
             onDataChanged(data) {
                 console.log('📊 Data changed received:', data);
                 currentData = data;
-                updateProgressDisplay();
                 
-                // Force update total progress after data sync
+                // Calculate and update all progress immediately
+                const progress = calculateProgress();
+                console.log('🧮 Calculated progress from data:', progress);
+                
+                // Update all progress circles with the calculated values
+                updateAllProgressCircles(progress);
+                
+                // Force multiple DOM updates to ensure visibility
                 setTimeout(() => {
-                    console.log('🔄 Force updating total progress after data sync');
-                    updateTotalProgress();
+                    updateAllProgressCircles(progress);
+                    console.log('✅ Progress display force updated #1');
+                }, 50);
+                
+                setTimeout(() => {
+                    updateAllProgressCircles(progress);
+                    console.log('✅ Progress display force updated #2');
                 }, 200);
+                
+                setTimeout(() => {
+                    updateAllProgressCircles(progress);
+                    console.log('✅ Progress display force updated #3');
+                }, 500);
             }
         };
 
         async function initializeApp() {
             try {
-                const initResult = await window.dataSdk.init(dataHandler);
-                if (!initResult.isOk) {
-                    console.error("Failed to initialize data SDK");
+                // Initialize local data from localStorage if no SDK available
+                if (!window.dataSdk) {
+                    console.log("🔄 Loading progress from localStorage...");
+                    const types = ['vocab', 'reading', 'grammar', 'life-expectancy'];
+                    types.forEach(type => {
+                        const saved = localStorage.getItem(`progress_${type}`);
+                        if (saved) {
+                            const progress = parseInt(saved);
+                            currentData.push({ 
+                                type: type, 
+                                progress: progress, 
+                                __backendId: 'local-' + type 
+                            });
+                            console.log(`📊 Loaded ${type}: ${progress}%`);
+                        }
+                    });
+                }
+                
+                // Wait for SDKs to be available
+                if (window.dataSdk) {
+                    const initResult = await window.dataSdk.init(dataHandler);
+                    if (!initResult.isOk) {
+                        console.error("Failed to initialize data SDK");
+                    } else {
+                        console.log("✅ Data SDK initialized successfully");
+                    }
+                } else {
+                    console.warn("⚠️ Data SDK not available, using localStorage");
                 }
                 
                 if (window.elementSdk) {
@@ -906,6 +947,9 @@
                             ["home_button_text", config.home_button_text || defaultConfig.home_button_text]
                         ])
                     });
+                    console.log("✅ Element SDK initialized successfully");
+                } else {
+                    console.warn("⚠️ Element SDK not available");
                 }
                 
                 await renderApp(window.elementSdk?.config || defaultConfig);
@@ -1949,48 +1993,24 @@
                 progress = Math.round((answeredCount / vocabularyQuiz.length) * 100);
             }
             
-            console.log(`Updating vocab progress to ${progress}%`);
+            console.log(`📚 Updating vocab progress to ${progress}%`);
             await saveProgress('vocab', progress);
-            
-            // Update display immediately with new progress
-            updateProgressCircle(1, progress); // vocab is index 1
-            
-            // Update total progress after vocab progress changes
-            setTimeout(() => {
-                updateTotalProgress();
-            }, 100);
         }
 
         async function updateReadingProgress() {
             const answeredCount = Object.keys(userAnswers).filter(k => k.startsWith('reading-') && !k.includes('selected')).length;
             const progress = Math.round((answeredCount / readingQuestions.length) * 100);
             
-            console.log(`Updating reading progress to ${progress}%`);
+            console.log(`📖 Updating reading progress to ${progress}%`);
             await saveProgress('reading', progress);
-            
-            // Update display immediately with new progress
-            updateProgressCircle(2, progress); // reading is index 2
-            
-            // Update total progress after reading progress changes
-            setTimeout(() => {
-                updateTotalProgress();
-            }, 100);
         }
 
         async function updateGrammarProgress() {
             const answeredCount = Object.keys(userAnswers).filter(k => k.startsWith('grammar-') && !k.includes('selected')).length;
             const progress = Math.round((answeredCount / grammarExercises.length) * 100);
             
-            console.log(`Updating grammar progress to ${progress}%`);
+            console.log(`📝 Updating grammar progress to ${progress}%`);
             await saveProgress('grammar', progress);
-            
-            // Update display immediately with new progress
-            updateProgressCircle(3, progress); // grammar is index 3
-            
-            // Update total progress after grammar progress changes
-            setTimeout(() => {
-                updateTotalProgress();
-            }, 100);
         }
 
         async function updateLifeExpectancyProgress() {
@@ -2007,6 +2027,26 @@
         async function saveProgress(type, value) {
             try {
                 console.log(`🔄 Attempting to save progress: ${type} = ${value}%`);
+                
+                // Check if Data SDK is available
+                if (!window.dataSdk) {
+                    console.warn('⚠️ Data SDK not available, using local storage fallback');
+                    // Fallback to local storage for standalone HTML
+                    localStorage.setItem(`progress_${type}`, value.toString());
+                    
+                    // Update local data structure
+                    const existing = currentData.find(d => d.type === type);
+                    if (existing) {
+                        existing.progress = value;
+                    } else {
+                        currentData.push({ type: type, progress: value, __backendId: 'local-' + Date.now() });
+                    }
+                    
+                    // Update progress display immediately
+                    const newProgress = calculateProgress();
+                    updateAllProgressCircles(newProgress);
+                    return;
+                }
                 
                 const existing = currentData.find(d => d.type === type);
                 
@@ -2025,13 +2065,15 @@
                             console.log('📊 Local data updated:', currentData[index]);
                         }
                         
-                        // Force update total progress after successful save
-                        setTimeout(() => {
-                            console.log('🎯 Updating total progress after successful save');
-                            const newProgress = calculateProgress();
-                            console.log('📈 New calculated progress:', newProgress);
-                            updateProgressCircle(0, newProgress.total);
-                        }, 300);
+                        // Immediately recalculate and update all progress multiple times
+                        const newProgress = calculateProgress();
+                        console.log('📈 Recalculated progress after save:', newProgress);
+                        
+                        // Update immediately and with delays to ensure visibility
+                        updateAllProgressCircles(newProgress);
+                        setTimeout(() => updateAllProgressCircles(newProgress), 100);
+                        setTimeout(() => updateAllProgressCircles(newProgress), 300);
+                        setTimeout(() => updateAllProgressCircles(newProgress), 600);
                         
                     } else {
                         console.error('❌ Failed to update progress:', result.error);
@@ -2052,13 +2094,15 @@
                         currentData.push(tempRecord);
                         console.log('📊 Local data added:', tempRecord);
                         
-                        // Force update total progress after successful save
-                        setTimeout(() => {
-                            console.log('🎯 Updating total progress after successful create');
-                            const newProgress = calculateProgress();
-                            console.log('📈 New calculated progress:', newProgress);
-                            updateProgressCircle(0, newProgress.total);
-                        }, 300);
+                        // Immediately recalculate and update all progress multiple times
+                        const newProgress = calculateProgress();
+                        console.log('📈 Recalculated progress after create:', newProgress);
+                        
+                        // Update immediately and with delays to ensure visibility
+                        updateAllProgressCircles(newProgress);
+                        setTimeout(() => updateAllProgressCircles(newProgress), 100);
+                        setTimeout(() => updateAllProgressCircles(newProgress), 300);
+                        setTimeout(() => updateAllProgressCircles(newProgress), 600);
                         
                     } else {
                         console.error('❌ Failed to save progress:', result.error);
@@ -2091,60 +2135,58 @@
         }
 
         function updateProgressCircle(index, value) {
-            const progressElements = document.querySelectorAll('.progress-ring-circle');
-            const progressLabels = document.querySelectorAll('.progress-ring + div .font-bold');
+            // Use more specific selectors to find progress elements
+            const progressRings = document.querySelectorAll('svg.progress-ring');
+            const progressTexts = document.querySelectorAll('svg.progress-ring + div .font-bold');
             
-            if (progressElements[index] && progressLabels[index]) {
-                const radius = 35;
-                const circumference = 2 * Math.PI * radius;
-                const offset = circumference - (value / 100) * circumference;
+            console.log(`🎯 Attempting to update circle ${index} to ${value}%`);
+            console.log(`Found ${progressRings.length} progress rings and ${progressTexts.length} text elements`);
+            
+            if (progressRings[index] && progressTexts[index]) {
+                // Update the circle stroke
+                const circle = progressRings[index].querySelector('.progress-ring-circle');
+                if (circle) {
+                    const radius = 35;
+                    const circumference = 2 * Math.PI * radius;
+                    const offset = circumference - (value / 100) * circumference;
+                    
+                    circle.style.strokeDashoffset = offset;
+                    console.log(`✅ Circle ${index} stroke updated: offset=${offset}`);
+                }
                 
-                progressElements[index].style.strokeDashoffset = offset;
-                progressLabels[index].textContent = `${value}%`;
+                // Update the text
+                progressTexts[index].textContent = `${value}%`;
+                console.log(`✅ Text ${index} updated to: ${value}%`);
                 
-                console.log(`Progress circle ${index} updated to ${value}%`);
+                // Force a repaint
+                progressRings[index].style.transform = 'translateZ(0)';
+                progressTexts[index].style.transform = 'translateZ(0)';
+                
+            } else {
+                console.warn(`❌ Could not find progress elements for index ${index}`);
             }
         }
 
-        function updateTotalProgress() {
-            const progress = calculateProgress();
-            console.log('🧮 Calculating total progress:', progress);
-            console.log(`📊 Individual progress - Vocab: ${progress.vocab}%, Reading: ${progress.reading}%, Grammar: ${progress.grammar}%`);
-            console.log(`🎯 Total progress calculated: ${progress.total}%`);
-            updateProgressCircle(0, progress.total); // total is index 0
+        function updateAllProgressCircles(progress) {
+            console.log('🔄 Updating all progress circles:', progress);
             
-            // Also update the DOM directly to ensure it shows
-            const totalProgressElement = document.querySelector('.progress-ring + div .font-bold');
-            if (totalProgressElement) {
-                totalProgressElement.textContent = `${progress.total}%`;
-                console.log(`✅ Total progress DOM updated to: ${progress.total}%`);
-            }
+            // Wait for DOM to be ready
+            requestAnimationFrame(() => {
+                // Update each circle individually with error handling
+                try {
+                    updateProgressCircle(0, progress.total);    // Total
+                    updateProgressCircle(1, progress.vocab);    // Vocabulary  
+                    updateProgressCircle(2, progress.reading);  // Reading
+                    updateProgressCircle(3, progress.grammar);  // Grammar
+                    
+                    console.log(`✅ All circles updated - Total: ${progress.total}%, Vocab: ${progress.vocab}%, Reading: ${progress.reading}%, Grammar: ${progress.grammar}%`);
+                } catch (error) {
+                    console.error('❌ Error updating progress circles:', error);
+                }
+            });
         }
 
-        function updateProgressDisplay() {
-            const progress = calculateProgress();
-            console.log('🔄 Updating progress display with:', progress);
-            
-            // Update all progress circles with detailed logging
-            console.log(`📊 Updating circles - Total: ${progress.total}%, Vocab: ${progress.vocab}%, Reading: ${progress.reading}%, Grammar: ${progress.grammar}%`);
-            
-            updateProgressCircle(0, progress.total);
-            updateProgressCircle(1, progress.vocab);
-            updateProgressCircle(2, progress.reading);
-            updateProgressCircle(3, progress.grammar);
-            
-            // Force update DOM elements directly
-            const progressLabels = document.querySelectorAll('.progress-ring + div .font-bold');
-            if (progressLabels.length >= 4) {
-                progressLabels[0].textContent = `${progress.total}%`;
-                progressLabels[1].textContent = `${progress.vocab}%`;
-                progressLabels[2].textContent = `${progress.reading}%`;
-                progressLabels[3].textContent = `${progress.grammar}%`;
-                console.log('✅ All progress labels updated directly');
-            }
-            
-            console.log('✅ All progress updated:', progress);
-        }
+
 
         function pronounceWord(word) {
             if ('speechSynthesis' in window) {
@@ -2411,5 +2453,5 @@
 
         initializeApp();
     </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'997c27d484e9c6f3',t:'MTc2MjAwODExMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'997c3664671a5cb5',t:'MTc2MjAwODcxMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
